@@ -13,10 +13,9 @@ import time
 
 
 class RNN(nn.Module):
-    def __init__(self, input_size, embedding_size, hidden_size, num_layers, has_input=True, has_output=False,
-                 output_size=None):
+    def __init__(self, input_size, embedding_size, hidden_size, num_layers, has_input=True, has_output=False, output_size=None):
         super(RNN, self).__init__()
-        self.num_layer = num_layers
+        self.num_layers = num_layers
         self.hidden_size = hidden_size
         self.has_input = has_input
         self.has_output = has_output
@@ -33,44 +32,70 @@ class RNN(nn.Module):
                 nn.ReLU(),
                 nn.Linear(embedding_size, output_size)
             )
-        self.relu = nn.ReLU()
 
-        self.hidden = None
+        self.relu = nn.ReLU()
+        # initialize
+        self.hidden = None  # need initialize before forward run
 
         for name, param in self.rnn.named_parameters():
             if 'bias' in name:
                 nn.init.constant(param, 0.25)
-            elif 'weigth' in name:
-                nn.init.xavier_uniform(param, gain=nn.init.calculate_gain('sigmoid'))
-
+            elif 'weight' in name:
+                nn.init.xavier_uniform(param,gain=nn.init.calculate_gain('sigmoid'))
         for m in self.modules():
             if isinstance(m, nn.Linear):
                 m.weight.data = init.xavier_uniform(m.weight.data, gain=nn.init.calculate_gain('relu'))
 
     def init_hidden(self, batch_size):
-        return Variable(torch.zeros(self.num_layer, batch_size, self.hidden_size)).cuda()
+        return Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size)).cuda()
 
     def forward(self, input_raw, pack=False, input_len=None):
         if self.has_input:
             input = self.input(input_raw)
-            input = self.input(input)
+            input = self.relu(input)
         else:
             input = input_raw
         if pack:
-            input = pack_padded_sequence(input=input, lengths=input_len, batch_first=True)
+            input = pack_padded_sequence(input, input_len, batch_first=True)
         output_raw, self.hidden = self.rnn(input, self.hidden)
         if pack:
-            output_raw = pad_packed_sequence(sequence=output_raw, batch_first=True)[0]
+            output_raw = pad_packed_sequence(output_raw, batch_first=True)[0]
         if self.has_output:
             output_raw = self.output(output_raw)
+        # return hidden state at each time step
         return output_raw
 
-def create_model(args):
+def sample_sigmoid(y, sample, thresh=0.5, sample_time=2):
+    '''
+        do sampling over unnormalized score
+    :param y: input
+    :param sample: Bool
+    :param thresh: if not sample, the threshold
+    :param sampe_time: how many times do we sample, if =1, do single sample
+    :return: sampled result
+    '''
 
-    node_level_rnn = RNN()
-    edge_level_rnn= RNN()
-
-    model ={
-        'node_level_rnn':node_level_rnn,
-        'edge_level_rnn':edge_level_rnn
-    }
+    # do sigmoid first
+    y = F.sigmoid(y)
+    # do sampling
+    if sample:
+        if sample_time>1:
+            y_result = Variable(torch.rand(y.size(0),y.size(1),y.size(2))).cuda()
+            # loop over all batches
+            for i in range(y_result.size(0)):
+                # do 'multi_sample' times sampling
+                for j in range(sample_time):
+                    y_thresh = Variable(torch.rand(y.size(1), y.size(2))).cuda()
+                    y_result[i] = torch.gt(y[i], y_thresh).float()
+                    if (torch.sum(y_result[i]).data>0).any():
+                        break
+                    # else:
+                    #     print('all zero',j)
+        else:
+            y_thresh = Variable(torch.rand(y.size(0),y.size(1),y.size(2))).cuda()
+            y_result = torch.gt(y,y_thresh).float()
+    # do max likelihood based on some threshold
+    else:
+        y_thresh = Variable(torch.ones(y.size(0), y.size(1), y.size(2))*thresh).cuda()
+        y_result = torch.gt(y, y_thresh).float()
+    return y_result

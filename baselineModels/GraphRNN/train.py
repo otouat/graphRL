@@ -9,6 +9,8 @@ import torch.nn.functional as F
 from torch import optim
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
+from tensorboard_logger import configure, log_value
+import time as tm
 from baselineModels.GraphRNN.model import *
 from baselineModels.GraphRNN.data import *
 from synthethicDataset.generate_graphs import *
@@ -38,6 +40,7 @@ def train(args, dataset_train, rnn, output):
     # start main loop
     time_all = np.zeros(args.epochs)
     while epoch <= args.epochs:
+        time_start = tm.time()
         train_rnn_epoch(epoch, args, rnn, output, dataset_train,
                         optimizer_rnn, optimizer_output,
                         scheduler_rnn, scheduler_output)
@@ -136,7 +139,7 @@ def train_rnn_epoch(epoch, args, rnn, output, data_loader,
         output_y = pack_padded_sequence(output_y,output_y_len,batch_first=True)
         output_y = pad_packed_sequence(output_y,batch_first=True)[0]
         # use cross entropy loss
-        loss = binary_cross_entropy_weight(y_pred, output_y)
+        loss = F.binary_cross_entropy(y_pred, output_y)
         loss.backward()
         # update deterministic and lstm
         optimizer_output.step()
@@ -147,12 +150,12 @@ def train_rnn_epoch(epoch, args, rnn, output, data_loader,
 
         if epoch % args.epochs_log==0 and batch_idx==0: # only output first batch's statistics
             print('Epoch: {}/{}, train loss: {:.6f}, graph type: {}, num_layer: {}, hidden: {}'.format(
-                epoch, args.epochs,loss.data[0], args.graph_type, args.num_layers, args.hidden_size_rnn))
+                epoch, args.epochs,loss.data, args.graph_type, args.num_layers, args.hidden_size_rnn))
 
         # logging
-        log_value('loss_'+args.fname, loss.data[0], epoch*args.batch_ratio+batch_idx)
+        log_value('loss_'+args.fname, loss.data, epoch*args.batch_ratio+batch_idx)
         feature_dim = y.size(1)*y.size(2)
-        loss_sum += loss.data[0]*feature_dim
+        loss_sum += loss.data*feature_dim
     return loss_sum/(batch_idx+1)
 
 
