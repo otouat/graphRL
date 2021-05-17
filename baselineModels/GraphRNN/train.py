@@ -132,7 +132,7 @@ def train_rnn_epoch(epoch, args, rnn, output, data_loader,
         hidden_null = Variable(torch.zeros(args.num_layers-1, h.size(0), h.size(1))).cuda()
         output.hidden = torch.cat((h.view(1,h.size(0),h.size(1)),hidden_null),dim=0) # num_layers, batch_size, hidden_size
         y_pred = output(output_x, pack=True, input_len=output_y_len)
-        y_pred = F.sigmoid(y_pred)
+        y_pred = torch.sigmoid(y_pred)
         # clean
         y_pred = pack_padded_sequence(y_pred, output_y_len, batch_first=True)
         y_pred = pad_packed_sequence(y_pred, batch_first=True)[0]
