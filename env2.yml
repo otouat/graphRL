@@ -1,0 +1,14 @@
+name: graphRL
+channels:
+  - defaults
+dependencies:
+  - torchvision
+  - tensorboard
+  - torchtext
+  - python=3.7
+  - pip
+  - jupyterlab
+  - pytorch
+  - cudatoolkit
+  - networkx
+  - scipy
