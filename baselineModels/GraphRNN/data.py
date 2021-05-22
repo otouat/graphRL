@@ -74,6 +74,8 @@ class Graph_to_sequence(Dataset):
             adj_copy = adj_copy[np.ix_(x_idx, x_idx)]
             # encode adj
             adj_encoded = encode_adj_flexible(adj_copy.copy())
+            if adj_encoded==[]:
+                continue
             max_encoded_len = max([len(adj_encoded[i]) for i in range(len(adj_encoded))])
             max_prev_node.append(max_encoded_len)
         max_prev_node = sorted(max_prev_node)[-1 * topk:]
