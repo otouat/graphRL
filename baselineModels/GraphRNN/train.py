@@ -1,3 +1,4 @@
+"""Copyright (c) 2017 Jiaxuan You, Rex Ying"""
 import networkx as nx
 import numpy as np
 import torch

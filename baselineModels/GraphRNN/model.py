@@ -1,3 +1,5 @@
+"""Copyright (c) 2017 Jiaxuan You, Rex Ying"""
+
 import torch
 import torch.nn as nn
 from torch.autograd import Variable
