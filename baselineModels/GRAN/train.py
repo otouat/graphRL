@@ -22,7 +22,7 @@ from torch.nn.utils import clip_grad_norm_
 import torch.utils.data.distributed as distributed
 
 from model import *
-from dataset import *
+from data import *
 from utils.logger import get_logger
 from utils.train_helper import data_to_gpu, snapshot, load_model, EarlyStopper
 from utils.data_helper import *
