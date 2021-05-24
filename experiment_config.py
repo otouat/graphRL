@@ -15,7 +15,7 @@ class Args:
 
         # Select the method : GraphRNN | GRAN | GraphOpt
         self.note = 'GraphRNN'
-        self.graph_type = 'barabasi'
+        self.graph_type = 'erdos'
         # GraphRNN model parameters
         self.parameter_shrink=1
         self.hidden_size_rnn = int(128 / self.parameter_shrink)  # hidden size for main RNN
@@ -31,8 +31,8 @@ class Args:
         self.num_layers = 4
 
         # Training parameter
-        self.data_size = 200
-        self.num_vertices = 120
+        self.data_size = 500
+        self.num_vertices = 60
         self.p_erdos = 0.1
         self.k_watts = 10
         self.p_watts = 0.1
@@ -46,7 +46,7 @@ class Args:
         self.epochs_log = 50
         self.epochs_save = 50
 
-        self.lr = 0.003
+        self.lr = 0.005
         self.milestones = [400, 1000]
         self.lr_rate = 0.3
 
