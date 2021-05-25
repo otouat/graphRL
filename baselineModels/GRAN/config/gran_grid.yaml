@@ -1,6 +1,6 @@
 ---
 exp_name: GRAN
-exp_dir: exp/GRAN
+exp_dir: baselineModels/GRAN/exp/GRAN
 runner: GranRunner
 use_horovod: false
 use_gpu: true
@@ -10,7 +10,7 @@ seed: 1234
 dataset:
   loader_name: GRANData
   name: grid
-  data_path: data/
+  data_path: baselineModels/GRAN/data
   node_order: DFS # k_core/BFS/degree_decent
   train_ratio: 0.8
   dev_ratio: 0.2
@@ -40,7 +40,7 @@ train:
   lr_decay: 0.3
   lr_decay_epoch: [100000000] # no decay
   num_workers: 0
-  max_epoch: 3000
+  max_epoch: 100
   batch_size: 1
   display_iter: 10
   snapshot_epoch: 100
@@ -63,5 +63,5 @@ test:
   num_vis: 20
   vis_num_row: 5 # visualize `num_vis` samples in `vis_num_row` rows
   better_vis: true
-  test_model_dir: snapshot_model
-  test_model_name: gran_grid.pth
+  test_model_dir: baselineModels/GRAN/exp/GRAN/GRANMixtureBernoulli_grid_2021-May-25-14-15-34_1960/
+  test_model_name: model_snapshot_0000100.pth

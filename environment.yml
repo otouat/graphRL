@@ -10,7 +10,7 @@ dependencies:
   - jupyterlab
   - pytorch=1.8.1
   - cudatoolkit=11.1
-  - networkx
+  - networkx=2.3
   - scipy
   - torchtext=0.9.1
   - torchvision=0.9.1

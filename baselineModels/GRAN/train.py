@@ -217,7 +217,7 @@ class GranRunner(object):
         results = defaultdict(list)
         for epoch in range(resume_epoch, self.train_conf.max_epoch):
             model.train()
-            lr_scheduler.step()
+
             train_iterator = train_loader.__iter__()
 
             for inner_iter in range(len(train_loader) // self.num_gpus):
@@ -260,6 +260,7 @@ class GranRunner(object):
 
                 # clip_grad_norm_(model.parameters(), 5.0e-0)
                 optimizer.step()
+                lr_scheduler.step()
                 avg_train_loss /= float(self.dataset_conf.num_fwd_pass)
 
                 # reduce
