@@ -1,6 +1,6 @@
 ---
 exp_name: GRAN
-exp_dir: baselineModels/GRAN/exp/GRAN
+exp_dir: exp/GRAN
 runner: GranRunner
 use_horovod: false
 use_gpu: true
@@ -10,7 +10,7 @@ seed: 1234
 dataset:
   loader_name: GRANData
   name: erdos
-  data_path: baselineModels/GRAN/data
+  data_path: data
   node_order: DFS # k_core/BFS/degree_decent
   train_ratio: 0.8
   dev_ratio: 0.2
@@ -58,7 +58,7 @@ test:
   num_workers: 4
   num_test_gen: 20 # number of generated samples
   is_vis: true
-  is_single_plot: false # visualize `num_vis` samples in a single image
+  is_single_plot: true # visualize `num_vis` samples in a single image
   is_test_ER: false # test Erdos-Renyi baseline
   num_vis: 20
   vis_num_row: 5 # visualize `num_vis` samples in `vis_num_row` rows
