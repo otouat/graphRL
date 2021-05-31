@@ -14,7 +14,6 @@ from tensorboard_logger import configure, log_value
 import time as tm
 from baselineModels.GraphRNN.model import *
 from baselineModels.GraphRNN.data import *
-from synthethicDataset.generate_graphs import *
 
 
 def train(args, dataset_train, rnn, output):
