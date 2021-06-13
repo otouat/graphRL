@@ -639,10 +639,12 @@ class GraphRnnRunner(object):
                 "NLL Loss @ epoch {:04d} iteration {:08d} = {}".format(epoch + 1, iter_count, train_loss))
 
             # snapshot model
-            # if (epoch + 1) % self.train_conf.snapshot_epoch == 0:
-            #     logger.info("Saving Snapshot @ epoch {:04d}".format(epoch + 1))
-            #     snapshot(model.module if self.use_gpu else model, optimizer, self.config, epoch + 1,
-            #              scheduler=lr_scheduler)
+            if (epoch + 1) % self.train_conf.snapshot_epoch == 0:
+                logger.info("Saving Snapshot @ epoch {:04d}".format(epoch + 1))
+                snapshot(rnn.module if self.use_gpu else rnn, optimizer_rnn, self.config, epoch + 1,
+                         scheduler=scheduler_rnn, graph_model="rnn")
+                snapshot(output.module if self.use_gpu else rnn, optimizer_output, self.config, epoch + 1,
+                         scheduler=scheduler_output,graph_model="output")
 
         pickle.dump(results, open(os.path.join(self.config.save_dir, 'train_stats.p'), 'wb'))
         self.writer.close()
