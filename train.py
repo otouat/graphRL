@@ -24,6 +24,7 @@ from baselineModels.GRAN.model import *
 from baselineModels.GRAN.data import *
 from baselineModels.GraphRNN.model import *
 from baselineModels.GraphRNN.data import *
+from baselineModels.GraphRNN.train import test_rnn_epoch_runner
 from utils.logger import get_logger
 from utils.train_helper import data_to_gpu, snapshot, load_model, EarlyStopper
 from utils.data_helper import *
@@ -662,37 +663,38 @@ class GraphRnnRunner(object):
                           range(self.num_test_gen)]
         else:
             ### load model
-            model = eval(self.model_conf.name)(self.config)
+            # create models
+            rnn = RNN(input_size=int(self.model_conf.max_prev_node),
+                      embedding_size=int(self.model_conf.embedding_size_rnn),
+                      hidden_size=int(self.model_conf.hidden_size_rnn), num_layers=int(self.model_conf.num_layers),
+                      has_input=True,
+                      has_output=True, output_size=int(self.model_conf.hidden_size_rnn_output)).cuda()
+            output = RNN(input_size=1, embedding_size=int(self.model_conf.embedding_size_rnn_output),
+                         hidden_size=int(self.model_conf.hidden_size_rnn_output),
+                         num_layers=int(self.model_conf.num_layers),
+                         has_input=True,
+                         has_output=True, output_size=1).cuda()
+
+            # create optimizer
+            params_rnn = filter(lambda p: p.requires_grad, rnn.parameters())
+            params_output = filter(lambda p: p.requires_grad, output.parameters())
+
+            optimizer_rnn = optim.Adam(params_rnn, lr=self.train_conf.lr)
+            optimizer_output = optim.Adam(params_output, lr=self.train_conf.lr)
+
+            scheduler_rnn = optim.lr_scheduler.MultiStepLR(optimizer_rnn, self.train_conf.lr_decay_epoch,
+                                                           gamma=self.train_conf.lr_decay)
+            scheduler_output = optim.lr_scheduler.MultiStepLR(optimizer_output, self.train_conf.lr_decay_epoch,
+                                                              gamma=self.train_conf.lr_decay)
+
             model_file = os.path.join(self.config.save_dir, self.test_conf.test_model_name)
-            load_model(model, model_file, self.device)
+            load_model(rnn, model_file, self.device)
+            load_model(output, model_file, self.device)
 
-            if self.use_gpu:
-                model = nn.DataParallel(model, device_ids=self.gpus).to(self.device)
-
-            model.eval()
-
-            ### Generate Graphs
-            A_pred = []
-            num_nodes_pred = []
-            num_test_batch = int(np.ceil(self.num_test_gen / self.test_conf.batch_size))
-
-            gen_run_time = []
-            for ii in tqdm(range(num_test_batch)):
-                with torch.no_grad():
-                    start_time = time.time()
-                    input_dict = {}
-                    input_dict['is_sampling'] = True
-                    input_dict['batch_size'] = self.test_conf.batch_size
-                    input_dict['num_nodes_pmf'] = self.num_nodes_pmf_train
-                    A_tmp = model(input_dict)
-                    gen_run_time += [time.time() - start_time]
-                    A_pred += [aa.data.cpu().numpy() for aa in A_tmp]
-                    num_nodes_pred += [aa.shape[0] for aa in A_tmp]
-
-            logger.info('Average test time per mini-batch = {}'.format(
-                np.mean(gen_run_time)))
-
-            graphs_gen = [get_graph(aa) for aa in A_pred]
+            rnn.eval()
+            output.eval()
+            num_test_size = num_test_batch = int(np.ceil(self.num_test_gen / self.test_conf.batch_size))
+            graphs_gen=test_rnn_epoch_runner(self.model_conf.max_epoch, self.model_conf, rnn, output, test_batch_size=num_test_size)
 
         ### Visualize Generated Graphs
         if self.is_vis:
