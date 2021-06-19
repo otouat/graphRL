@@ -203,7 +203,7 @@ def test_rnn_epoch_runner(epoch, model_conf, rnn, output, test_batch_size=16):
     # generate graphs
     max_num_node = int(model_conf.max_num_node)
     y_pred_long = Variable(torch.zeros(test_batch_size, max_num_node, model_conf.max_prev_node)).cuda() # discrete prediction
-    x_step = Variable(torch.ones(test_batch_size,1,cmodel_conf.max_prev_node)).cuda()
+    x_step = Variable(torch.ones(test_batch_size,1,model_conf.max_prev_node)).cuda()
     for i in range(max_num_node):
         h = rnn(x_step)
         # output.hidden = h.permute(1,0,2)

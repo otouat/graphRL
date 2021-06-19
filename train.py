@@ -642,9 +642,9 @@ class GraphRnnRunner(object):
             # snapshot model
             if (epoch + 1) % self.train_conf.snapshot_epoch == 0:
                 logger.info("Saving Snapshot @ epoch {:04d}".format(epoch + 1))
-                snapshot(rnn.module if self.use_gpu else rnn, optimizer_rnn, self.config, epoch + 1,
+                snapshot(rnn, optimizer_rnn, self.config, epoch + 1,
                          scheduler=scheduler_rnn, graph_model="rnn")
-                snapshot(output.module if self.use_gpu else rnn, optimizer_output, self.config, epoch + 1,
+                snapshot(output, optimizer_output, self.config, epoch + 1,
                          scheduler=scheduler_output,graph_model="output")
 
         pickle.dump(results, open(os.path.join(self.config.save_dir, 'train_stats.p'), 'wb'))
@@ -687,23 +687,24 @@ class GraphRnnRunner(object):
             scheduler_output = optim.lr_scheduler.MultiStepLR(optimizer_output, self.train_conf.lr_decay_epoch,
                                                               gamma=self.train_conf.lr_decay)
 
-            model_file = os.path.join(self.config.save_dir, self.test_conf.test_model_name)
-            load_model(rnn, model_file, self.device)
-            load_model(output, model_file, self.device)
+            rnn_file = os.path.join(self.config.save_dir, self.test_conf.test_rnn_name)
+            output_file = os.path.join(self.config.save_dir, self.test_conf.test_output_name)
+            load_model(rnn, rnn_file, self.device)
+            load_model(output, output_file, self.device)
 
             rnn.eval()
             output.eval()
             num_test_size = num_test_batch = int(np.ceil(self.num_test_gen / self.test_conf.batch_size))
-            graphs_gen=test_rnn_epoch_runner(self.model_conf.max_epoch, self.model_conf, rnn, output, test_batch_size=num_test_size)
+            graphs_gen=test_rnn_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output, test_batch_size=num_test_size)
 
         ### Visualize Generated Graphs
         if self.is_vis:
             num_col = self.vis_num_row
             num_row = int(np.ceil(self.num_vis / num_col))
-            test_epoch = self.test_conf.test_model_name
+            test_epoch = self.test_conf.test_rnn_name
             test_epoch = test_epoch[test_epoch.rfind('_') + 1:test_epoch.find('.pth')]
-            save_name = os.path.join(self.config.save_dir, '{}_gen_graphs_epoch_{}_block_{}_stride_{}.png'.format(
-                self.config.test.test_model_name[:-4], test_epoch, self.block_size, self.stride))
+            save_name = os.path.join(self.config.save_dir, '{}_gen_graphs_epoch_{}.png'.format(
+                self.config.test.test_rnn_name[:-4], test_epoch))
 
             # remove isolated nodes for better visulization
             graphs_pred_vis = [copy.deepcopy(gg) for gg in graphs_gen[:self.num_vis]]
