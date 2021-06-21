@@ -14,7 +14,6 @@ from tensorboard_logger import configure, log_value
 import time as tm
 from baselineModels.GraphRNN.model import *
 from baselineModels.GraphRNN.data import *
-from synthethicDataset.generate_graphs import *
 
 
 def train(args, dataset_train, rnn, output):
@@ -179,6 +178,41 @@ def test_rnn_epoch(epoch, args, rnn, output, test_batch_size=16):
         x_step = Variable(torch.zeros(test_batch_size,1,args.max_prev_node)).cuda()
         output_x_step = Variable(torch.ones(test_batch_size,1,1)).cuda()
         for j in range(min(args.max_prev_node,i+1)):
+            output_y_pred_step = output(output_x_step)
+            output_x_step = sample_sigmoid(output_y_pred_step, sample=True, sample_time=1)
+            x_step[:,:,j:j+1] = output_x_step
+            output.hidden = Variable(output.hidden.data).cuda()
+        y_pred_long[:, i:i + 1, :] = x_step
+        rnn.hidden = Variable(rnn.hidden.data).cuda()
+    y_pred_long_data = y_pred_long.data.long()
+
+    # save graphs as pickle
+    G_pred_list = []
+    for i in range(test_batch_size):
+        adj_pred = decode_adj(y_pred_long_data[i].cpu().numpy())
+        G_pred = get_graph(adj_pred) # get a graph from zero-padded adj
+        G_pred_list.append(G_pred)
+
+    return G_pred_list
+
+def test_rnn_epoch_runner(epoch, model_conf, rnn, output, test_batch_size=16):
+    rnn.hidden = rnn.init_hidden(test_batch_size)
+    rnn.eval()
+    output.eval()
+
+    # generate graphs
+    max_num_node = int(model_conf.max_num_node)
+    y_pred_long = Variable(torch.zeros(test_batch_size, max_num_node, model_conf.max_prev_node)).cuda() # discrete prediction
+    x_step = Variable(torch.ones(test_batch_size,1,model_conf.max_prev_node)).cuda()
+    for i in range(max_num_node):
+        h = rnn(x_step)
+        # output.hidden = h.permute(1,0,2)
+        hidden_null = Variable(torch.zeros(model_conf.num_layers - 1, h.size(0), h.size(2))).cuda()
+        output.hidden = torch.cat((h.permute(1,0,2), hidden_null),
+                                  dim=0)  # num_layers, batch_size, hidden_size
+        x_step = Variable(torch.zeros(test_batch_size,1,model_conf.max_prev_node)).cuda()
+        output_x_step = Variable(torch.ones(test_batch_size,1,1)).cuda()
+        for j in range(min(model_conf.max_prev_node,i+1)):
             output_y_pred_step = output(output_x_step)
             output_x_step = sample_sigmoid(output_y_pred_step, sample=True, sample_time=1)
             x_step[:,:,j:j+1] = output_x_step
