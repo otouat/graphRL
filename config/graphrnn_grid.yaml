@@ -22,7 +22,7 @@ dataset:
   is_overwrite_precompute: false
 model:
   name: RNN
-  is_mlp : true
+  is_mlp : false
   hidden_size_rnn : 128  # hidden size for main RNN
   hidden_size_rnn_output: 16  # hidden size for output RNN
   embedding_size_rnn : 64  # the size for LSTM input
