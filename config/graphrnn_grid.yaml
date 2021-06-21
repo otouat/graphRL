@@ -22,6 +22,7 @@ dataset:
   is_overwrite_precompute: false
 model:
   name: RNN
+  is_mlp : true
   hidden_size_rnn : 128  # hidden size for main RNN
   hidden_size_rnn_output: 16  # hidden size for output RNN
   embedding_size_rnn : 64  # the size for LSTM input
@@ -62,6 +63,6 @@ test:
   num_vis: 20
   vis_num_row: 5 # visualize `num_vis` samples in `vis_num_row` rows
   better_vis: true
-  test_model_dir: exp/GraphRNN/RNN_erdos_2021-Jun-19-15-49-41_8428/
+  test_model_dir: exp/GraphRNN/RNN_grid_2021-Jun-19-16-29-29_15200
   test_rnn_name: rnn_snapshot_0000100.pth
   test_output_name : output_snapshot_0000100.pth
