@@ -41,9 +41,14 @@ def train(args, dataset_train, rnn, output):
     time_all = np.zeros(args.epochs)
     while epoch <= args.epochs:
         time_start = tm.time()
-        train_rnn_epoch(epoch, args, rnn, output, dataset_train,
-                        optimizer_rnn, optimizer_output,
-                        scheduler_rnn, scheduler_output)
+        if 'GraphRNN_MLP' in args.note:
+            train_mlp_epoch(epoch, args, rnn, output, dataset_train,
+                            optimizer_rnn, optimizer_output,
+                            scheduler_rnn, scheduler_output)
+        else:
+            train_rnn_epoch(epoch, args, rnn, output, dataset_train,
+                            optimizer_rnn, optimizer_output,
+                            scheduler_rnn, scheduler_output)
         time_end = tm.time()
         time_all[epoch - 1] = time_end - time_start
         # test
@@ -51,7 +56,11 @@ def train(args, dataset_train, rnn, output):
             for sample_time in range(1, 4):
                 G_pred = []
                 while len(G_pred) < args.test_total_size:
-                    G_pred_step = test_rnn_epoch(epoch, args, rnn, output, test_batch_size=args.test_batch_size)
+                    if 'GraphRNN_MLP' in args.note:
+                        G_pred_step = test_mlp_epoch(epoch, args, rnn, output, test_batch_size=args.test_batch_size,
+                                                     sample_time=sample_time)
+                    else:
+                        G_pred_step = test_rnn_epoch(epoch, args, rnn, output, test_batch_size=args.test_batch_size)
                     G_pred.extend(G_pred_step)
                 # save graphs
                 fname = args.graph_save_path + args.fname_pred + str(epoch) + '_' + str(sample_time) + '.dat'
@@ -166,8 +175,6 @@ def train_rnn_epoch_runner(iter_count, rnn, output, train_loader,
     rnn.train()
     output.train()
 
-
-    loss_sum = 0
     for batch_idx, data in enumerate(train_loader):
 
         iter_count += 1
@@ -246,8 +253,9 @@ def train_rnn_epoch_runner(iter_count, rnn, output, train_loader,
         scheduler_output.step()
 
         feature_dim = y.size(1) * y.size(2)
-        loss_sum += train_loss.data
-    return loss_sum / (batch_idx + 1) , iter_count
+        if batch_idx == 0:
+            loss_result = train_loss.data
+    return loss_result , iter_count
 
 
 def train_mlp_epoch_runner(iter_count, rnn, output, train_loader,
@@ -256,7 +264,7 @@ def train_mlp_epoch_runner(iter_count, rnn, output, train_loader,
     rnn.train()
     output.train()
 
-    loss_sum = 0
+    loss_result = 0
     for batch_idx, data in enumerate(train_loader):
         iter_count += 1
         rnn.zero_grad()
@@ -292,9 +300,10 @@ def train_mlp_epoch_runner(iter_count, rnn, output, train_loader,
         optimizer_rnn.step()
         scheduler_output.step()
         scheduler_rnn.step()
+        if batch_idx == 0:
+            loss_result = loss.data
 
-        loss_sum += loss.data
-    return loss_sum / (batch_idx + 1),iter_count
+    return loss_result,iter_count
 
 
 def train_mlp_epoch(epoch, args, rnn, output, data_loader,
@@ -340,10 +349,10 @@ def train_mlp_epoch(epoch, args, rnn, output, data_loader,
 
         if epoch % args.epochs_log == 0 and batch_idx == 0:  # only output first batch's statistics
             print('Epoch: {}/{}, train loss: {:.6f}, graph type: {}, num_layer: {}, hidden: {}'.format(
-                epoch, args.epochs, loss.data[0], args.graph_type, args.num_layers, args.hidden_size_rnn))
+                epoch, args.epochs, loss.data, args.graph_type, args.num_layers, args.hidden_size_rnn))
 
         # logging
-        log_value('loss_' + args.fname, loss.data[0], epoch * args.batch_ratio + batch_idx)
+        log_value('loss_' + args.fname, loss.data, epoch * args.batch_ratio + batch_idx)
 
         loss_sum += loss.data
     return loss_sum / (batch_idx + 1)
