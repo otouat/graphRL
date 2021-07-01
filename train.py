@@ -538,12 +538,6 @@ class GraphRnnRunner(object):
         scheduler_output = optim.lr_scheduler.MultiStepLR(optimizer_output, self.train_conf.lr_decay_epoch,
                                                           gamma=self.train_conf.lr_decay)
 
-        early_stop = EarlyStopper([0.0], win_size=100, is_decrease=False)
-
-        # reset gradient
-        optimizer_rnn.zero_grad()
-        optimizer_output.zero_grad()
-
         # resume training
         resume_epoch = 0
         # if self.train_conf.is_resume:
@@ -585,6 +579,7 @@ class GraphRnnRunner(object):
                          scheduler=scheduler_rnn, graph_model="rnn")
                 snapshot(output, optimizer_output, self.config, epoch + 1,
                          scheduler=scheduler_output, graph_model="output")
+            torch.cuda.empty_cache()
 
         pickle.dump(results, open(os.path.join(self.config.save_dir, 'train_stats.p'), 'wb'))
         self.writer.close()
