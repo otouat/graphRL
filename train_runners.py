@@ -276,7 +276,7 @@ class GranRunner(object):
                 if iter_count % self.train_conf.display_iter == 0 or iter_count == 1:
                     logger.info(
                         "NLL Loss @ epoch {:04d} iteration {:08d} = {}".format(epoch + 1, iter_count, train_loss))
-
+                torch.cuda.empty_cache()
             # snapshot model
             if (epoch + 1) % self.train_conf.snapshot_epoch == 0:
                 logger.info("Saving Snapshot @ epoch {:04d}".format(epoch + 1))
@@ -352,6 +352,8 @@ class GranRunner(object):
             for gg in graphs_pred_vis:
                 CGs = [gg.subgraph(c) for c in nx.connected_components(gg)]
                 CGs = sorted(CGs, key=lambda x: x.number_of_nodes(), reverse=True)
+                if len(CGs)==0:
+                    continue
                 vis_graphs += [CGs[0]]
 
             if self.is_single_plot:
