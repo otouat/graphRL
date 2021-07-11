@@ -217,7 +217,7 @@ class GranRunner(object):
 
         # Training Loop
         iter_count = 0
-        results = defaultdict(list)
+        #results = defaultdict(list)
         for epoch in range(resume_epoch, self.train_conf.max_epoch):
             model.train()
 
@@ -270,8 +270,8 @@ class GranRunner(object):
                 train_loss = float(avg_train_loss.data.cpu().numpy())
 
                 self.writer.add_scalar('train_loss', train_loss, iter_count)
-                results['train_loss'] += [train_loss]
-                results['train_step'] += [iter_count]
+                #results['train_loss'] += [train_loss]
+                #results['train_step'] += [iter_count]
 
                 if iter_count % self.train_conf.display_iter == 0 or iter_count == 1:
                     logger.info(
@@ -283,7 +283,7 @@ class GranRunner(object):
                 snapshot(model.module if self.use_gpu else model, optimizer, self.config, epoch + 1,
                          scheduler=lr_scheduler)
 
-        pickle.dump(results, open(os.path.join(self.config.save_dir, 'train_stats.p'), 'wb'))
+        #pickle.dump(results, open(os.path.join(self.config.save_dir, 'train_stats.p'), 'wb'))
         self.writer.close()
 
         return 1
@@ -378,6 +378,7 @@ class GranRunner(object):
                     layout='spring')
 
         ### Evaluation
+        results = defaultdict(float)
         if self.config.dataset.name in ['lobster']:
             acc = eval_acc_lobster_graph(graphs_gen)
             logger.info('Validity accuracy of generated graphs = {}'.format(acc))
@@ -397,11 +398,23 @@ class GranRunner(object):
                                                                                              degree_only=False)
         mmd_num_nodes_test = compute_mmd([np.bincount(num_nodes_test)], [np.bincount(num_nodes_gen)],
                                          kernel=gaussian_emd)
+        results['mmd_num_nodes_dev'] = mmd_num_nodes_dev
+        results['mmd_degree_dev'] = mmd_degree_dev
+        results['mmd_clustering_dev'] = mmd_clustering_dev
+        results['mmd_4orbits_dev'] = mmd_4orbits_dev
+        results['mmd_spectral_dev'] = mmd_spectral_dev
+        results['mmd_num_nodes_test'] = mmd_num_nodes_test
+        results['mmd_degree_test'] = mmd_degree_test
+        results['mmd_clustering_test'] = mmd_clustering_test
+        results['mmd_4orbits_test'] = mmd_4orbits_test
+        results['mmd_spectral_test'] = mmd_spectral_test
 
         logger.info("Validation MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
             mmd_num_nodes_dev, mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev))
         logger.info("Test MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
             mmd_num_nodes_test, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test))
+
+        pickle.dump(results, open(os.path.join(self.config.save_dir, 'evaluation_stats.p'), 'wb'))
 
         if self.config.dataset.name in ['lobster']:
             return mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test, acc
@@ -600,17 +613,23 @@ class GraphRnnRunner(object):
         else:
             ### load model
             # create models
-            rnn = RNN(input_size=int(self.model_conf.max_prev_node),
-                      embedding_size=int(self.model_conf.embedding_size_rnn),
-                      hidden_size=int(self.model_conf.hidden_size_rnn), num_layers=int(self.model_conf.num_layers),
-                      has_input=True,
-                      has_output=True, output_size=int(self.model_conf.hidden_size_rnn_output)).cuda()
-
             if self.model_conf.is_mlp:
+                rnn = RNN(input_size=int(self.model_conf.max_prev_node),
+                          embedding_size=int(self.model_conf.embedding_size_rnn),
+                          hidden_size=int(self.model_conf.hidden_size_rnn), num_layers=int(self.model_conf.num_layers),
+                          has_input=True,
+                          has_output=False).cuda()
+
                 output = MLP_plain(h_size=int(self.model_conf.hidden_size_rnn),
                                    embedding_size=int(self.model_conf.embedding_size_rnn_output),
                                    y_size=int(self.model_conf.max_prev_node)).cuda()
             else:
+                rnn = RNN(input_size=int(self.model_conf.max_prev_node),
+                          embedding_size=int(self.model_conf.embedding_size_rnn),
+                          hidden_size=int(self.model_conf.hidden_size_rnn), num_layers=int(self.model_conf.num_layers),
+                          has_input=True,
+                          has_output=True, output_size=int(self.model_conf.hidden_size_rnn_output)).cuda()
+
                 output = RNN(input_size=1, embedding_size=int(self.model_conf.embedding_size_rnn_output),
                              hidden_size=int(self.model_conf.hidden_size_rnn_output),
                              num_layers=int(self.model_conf.num_layers),
@@ -689,6 +708,7 @@ class GraphRnnRunner(object):
                     layout='spring')
 
         ### Evaluation
+        results = defaultdict(float)
         if self.config.dataset.name in ['lobster']:
             acc = eval_acc_lobster_graph(graphs_gen)
             logger.info('Validity accuracy of generated graphs = {}'.format(acc))
@@ -708,11 +728,23 @@ class GraphRnnRunner(object):
                                                                                              degree_only=False)
         mmd_num_nodes_test = compute_mmd([np.bincount(num_nodes_test)], [np.bincount(num_nodes_gen)],
                                          kernel=gaussian_emd)
+        results['mmd_num_nodes_dev']=mmd_num_nodes_dev
+        results['mmd_degree_dev'] = mmd_degree_dev
+        results['mmd_clustering_dev'] = mmd_clustering_dev
+        results['mmd_4orbits_dev'] = mmd_4orbits_dev
+        results['mmd_spectral_dev'] = mmd_spectral_dev
+        results['mmd_num_nodes_test'] = mmd_num_nodes_test
+        results['mmd_degree_test'] = mmd_degree_test
+        results['mmd_clustering_test'] = mmd_clustering_test
+        results['mmd_4orbits_test'] = mmd_4orbits_test
+        results['mmd_spectral_test'] = mmd_spectral_test
 
         logger.info("Validation MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
             mmd_num_nodes_dev, mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev))
         logger.info("Test MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
             mmd_num_nodes_test, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test))
+
+        pickle.dump(results, open(os.path.join(self.config.save_dir, 'evaluation_stats.p'), 'wb'))
 
         if self.config.dataset.name in ['lobster']:
             return mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test, acc
