@@ -157,6 +157,28 @@ def graph_load_batch(data_dir,
     return graphs
 
 
+def n_community(c_sizes, p_inter=0.01):
+    graphs = [nx.gnp_random_graph(c_sizes[i], 0.7, seed=i) for i in range(len(c_sizes))]
+    G = nx.disjoint_union_all(graphs)
+    communities = list(nx.connected_component_subgraphs(G))
+    for i in range(len(communities)):
+        subG1 = communities[i]
+        nodes1 = list(subG1.nodes())
+        for j in range(i + 1, len(communities)):
+            subG2 = communities[j]
+            nodes2 = list(subG2.nodes())
+            has_inter_edge = False
+            for n1 in nodes1:
+                for n2 in nodes2:
+                    if np.random.rand() < p_inter:
+                        G.add_edge(n1, n2)
+                        has_inter_edge = True
+            if not has_inter_edge:
+                G.add_edge(nodes1[0], nodes2[0])
+    # print('connected comp: ', len(list(nx.connected_component_subgraphs(G))))
+    return G
+
+
 def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
     npr = np.random.RandomState(seed)
     ### load datasets
@@ -207,7 +229,7 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
             node_attributes=False,
             graph_labels=True)
     elif graph_type == 'erdos':
-        for i in range(100,200):
+        for i in range(100, 200):
             graphs.append(nx.erdos_renyi_graph(i, 0.1))
     # elif graph_type == 'watts':
     #     for i in range(500):
@@ -215,6 +237,11 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
     elif graph_type == 'barabasi':
         for i in range(500):
             graphs.append(nx.barabasi_albert_graph(random.randint(100, 200), 4))
+    elif graph_type == 'community':
+        c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 4)
+        # c_sizes = [15] * num_communities
+        for k in range(3000):
+            graphs.append(n_community(c_sizes, p_inter=0.01))
 
     num_nodes = [gg.number_of_nodes() for gg in graphs]
     num_edges = [gg.number_of_edges() for gg in graphs]

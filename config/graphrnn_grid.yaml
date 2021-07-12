@@ -28,7 +28,7 @@ model:
   embedding_size_rnn : 64  # the size for LSTM input
   embedding_size_rnn_output : 8  # the embedding size for output rnn
   embedding_size_output : 64  # the embedding size for output (VAE/MLP)
-  max_num_node : 200  # max number of nodes in a graph
+  max_num_node : 361  # max number of nodes in a graph
   max_prev_node : 100  # max previous node that looks back
   batch_size : 32  # normal: 32, and the rest should be changed accordingly
   test_batch_size : 32
@@ -40,7 +40,7 @@ train:
   lr_decay: 0.3
   lr_decay_epoch: [400, 1000] # no decay
   num_workers: 0
-  max_epoch: 100
+  max_epoch: 2400
   batch_size: 1
   display_iter: 10
   snapshot_epoch: 100
