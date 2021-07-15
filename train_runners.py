@@ -655,14 +655,13 @@ class GraphRnnRunner(object):
 
             rnn.eval()
             output.eval()
-            num_test_size = num_test_batch = int(np.ceil(self.num_test_gen / self.test_conf.batch_size))
+            num_test_size = int(np.ceil(self.num_test_gen))
             if self.model_conf.is_mlp :
                 graphs_gen = test_mlp_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
                                                    test_batch_size=num_test_size)
             else :
                 graphs_gen = test_rnn_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
                                                test_batch_size=num_test_size)
-
         ### Visualize Generated Graphs
         if self.is_vis:
             num_col = self.vis_num_row
