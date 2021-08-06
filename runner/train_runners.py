@@ -3,6 +3,8 @@
 from __future__ import (division, print_function)
 import os
 import time
+from random import shuffle
+
 import networkx as nx
 import numpy as np
 import copy
@@ -656,12 +658,16 @@ class GraphRnnRunner(object):
             rnn.eval()
             output.eval()
             num_test_size = int(np.ceil(self.num_test_gen))
+            G_pred = []
             if self.model_conf.is_mlp :
                 graphs_gen = test_mlp_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
                                                    test_batch_size=num_test_size)
             else :
-                graphs_gen = test_rnn_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
-                                               test_batch_size=num_test_size)
+                while len(G_pred) < self.model_conf.test_total_size:
+                    graphs_gen = test_rnn_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
+                                               test_batch_size=self.model_conf.test_batch_size)
+                    G_pred.extend(graphs_gen)
+            shuffle(G_pred)
         ### Visualize Generated Graphs
         if self.is_vis:
             num_col = self.vis_num_row
