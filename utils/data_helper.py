@@ -229,8 +229,8 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
             node_attributes=False,
             graph_labels=True)
     elif graph_type == 'erdos':
-        for i in range(100, 200):
-            graphs.append(nx.erdos_renyi_graph(i, 0.1))
+        for i in range(500):
+            graphs.append(nx.erdos_renyi_graph(random.randint(100, 200), 0.1))
     # elif graph_type == 'watts':
     #     for i in range(500):
     #         graphs.append(nx.watts_strogatz_graph(num_vertices, k_watts, p_watts))
@@ -240,7 +240,7 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
     elif graph_type == 'community':
         c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 4)
         # c_sizes = [15] * num_communities
-        for k in range(3000):
+        for k in range(100):
             graphs.append(n_community(c_sizes, p_inter=0.01))
 
     num_nodes = [gg.number_of_nodes() for gg in graphs]
