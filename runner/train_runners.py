@@ -12,6 +12,7 @@ import pickle
 from collections import defaultdict
 from tqdm import tqdm
 import concurrent.futures
+import pandas as pd
 
 import torch
 import torch.nn as nn
@@ -52,7 +53,7 @@ logger = get_logger('exp_logger')
 __all__ = ['GranRunner', 'GraphRnnRunner', 'compute_edge_ratio', 'get_graph', 'evaluate']
 
 NPR = np.random.RandomState(seed=1234)
-
+save_file = 'save_model_learning.csv'
 
 def compute_edge_ratio(G_list):
     num_edges_max, num_edges = .0, .0
@@ -89,6 +90,18 @@ def evaluate(graph_gt, graph_pred, degree_only=True):
 
     return mmd_degree, mmd_clustering, mmd_4orbits, mmd_spectral
 
+def save_training_runs(date,dataset,dataset_num,model,epochs,file_dir):
+    data = [{"Date": date, "dataset_name": dataset,"dataset_num_graphs" :dataset_num, "model_name": model, "num_epochs": epochs, "file_dir": file_dir}]
+
+    if not os.path.isfile(save_file):
+        df = pd.DataFrame(data)
+        df.to_csv(save_file)
+        return 1
+
+    df = pd.DataFrame(data)
+    df.to_csv(save_file, mode='a', header=False)
+
+    return 1
 
 class GranRunner(object):
 
@@ -284,7 +297,8 @@ class GranRunner(object):
                 logger.info("Saving Snapshot @ epoch {:04d}".format(epoch + 1))
                 snapshot(model.module if self.use_gpu else model, optimizer, self.config, epoch + 1,
                          scheduler=lr_scheduler)
-
+        save_training_runs(time.strftime('%Y-%b-%d-%H-%M-%S'), self.dataset_conf.name,self.num_graphs,self.model_conf.name,
+                           self.train_conf.max_epoch, self.config.save_dir)
         #pickle.dump(results, open(os.path.join(self.config.save_dir, 'train_stats.p'), 'wb'))
         self.writer.close()
 
@@ -521,7 +535,7 @@ class GraphRnnRunner(object):
 
 
         if self.model_conf.is_mlp:
-            rnn = RNN(input_size=int(self.model_conf.max_prev_node),
+            rnn = RNN(input_size=int(dataset.max_prev_node),
                       embedding_size=int(self.model_conf.embedding_size_rnn),
                       hidden_size=int(self.model_conf.hidden_size_rnn), num_layers=int(self.model_conf.num_layers),
                       has_input=True,
@@ -529,9 +543,9 @@ class GraphRnnRunner(object):
 
             output = MLP_plain(h_size=int(self.model_conf.hidden_size_rnn),
                                embedding_size=int(self.model_conf.embedding_size_rnn_output),
-                               y_size=int(self.model_conf.max_prev_node)).cuda()
+                               y_size=int(dataset.max_prev_node)).cuda()
         else:
-            rnn = RNN(input_size=int(self.model_conf.max_prev_node),
+            rnn = RNN(input_size=int(dataset.max_prev_node),
                       embedding_size=int(self.model_conf.embedding_size_rnn),
                       hidden_size=int(self.model_conf.hidden_size_rnn), num_layers=int(self.model_conf.num_layers),
                       has_input=True,
@@ -599,6 +613,8 @@ class GraphRnnRunner(object):
             torch.cuda.empty_cache()
 
         pickle.dump(results, open(os.path.join(self.config.save_dir, 'train_stats.p'), 'wb'))
+        save_training_runs(time.strftime('%Y-%b-%d-%H-%M-%S'), self.dataset_conf.name,self.num_graphs,self.model_conf.name,
+                           self.train_conf.max_epoch, self.config.save_dir)
         self.writer.close()
 
         return 1
