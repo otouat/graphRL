@@ -1,6 +1,6 @@
 ---
 exp_name: GraphRNN
-exp_dir: exp/GraphRNN
+exp_dir: exp/GraphRNN/rnn
 runner: GraphRnnRunner
 use_horovod: false
 use_gpu: true
@@ -28,8 +28,8 @@ model:
   embedding_size_rnn : 64  # the size for LSTM input
   embedding_size_rnn_output : 8  # the embedding size for output rnn
   embedding_size_output : 64  # the embedding size for output (VAE/MLP)
-  max_num_node : 200  # max number of nodes in a graph
-  max_prev_node : 80  # max previous node that looks back
+  max_num_node : 70  # max number of nodes in a graph
+  max_prev_node : 70 # max previous node that looks back
   batch_size : 32  # normal: 32, and the rest should be changed accordingly
   test_batch_size : 32
   test_total_size : 1000
@@ -40,7 +40,7 @@ train:
   lr_decay: 0.3
   lr_decay_epoch: [400, 1000] # no decay
   num_workers: 0
-  max_epoch: 500
+  max_epoch: 2000
   batch_size: 1
   display_iter: 10
   snapshot_epoch: 100

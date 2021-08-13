@@ -1,6 +1,6 @@
 ---
 exp_name: GraphRNN
-exp_dir: exp/GraphRNN
+exp_dir: exp/GraphRNN/mlp
 runner: GraphRnnRunner
 use_horovod: false
 use_gpu: true

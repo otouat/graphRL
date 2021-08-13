@@ -11,7 +11,7 @@ dataset:
   loader_name: GRANData
   name: erdos
   data_path: data
-  node_order: DFS # k_core/BFS/degree_decent
+  node_order: BFS # k_core/BFS/degree_decent
   train_ratio: 0.8
   dev_ratio: 0.2
   num_subgraph_batch: 50 # number of subgraphs per mini-batch
@@ -22,7 +22,7 @@ dataset:
   is_overwrite_precompute: false
 model:
   name: GRANMixtureBernoulli
-  num_mix_component: 20
+  num_mix_component: 1
   is_sym: true
   block_size: 1
   sample_stride: 1
