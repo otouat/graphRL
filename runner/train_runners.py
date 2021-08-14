@@ -542,7 +542,7 @@ class GraphRnnRunner(object):
                       has_output=False).cuda()
 
             output = MLP_plain(h_size=int(self.model_conf.hidden_size_rnn),
-                               embedding_size=int(self.model_conf.embedding_size_rnn_output),
+                               embedding_size=int(self.model_conf.embedding_size_output),
                                y_size=int(dataset.max_prev_node)).cuda()
         else:
             rnn = RNN(input_size=int(dataset.max_prev_node),
