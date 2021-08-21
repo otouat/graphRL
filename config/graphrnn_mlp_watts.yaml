@@ -1,6 +1,6 @@
 ---
 exp_name: GraphRNN
-exp_dir: exp/GraphRNN/rnn/watts
+exp_dir: exp/GraphRNN/mlp/watts
 runner: GraphRnnRunner
 use_horovod: false
 use_gpu: true
@@ -29,7 +29,7 @@ model:
   embedding_size_rnn_output : 8  # the embedding size for output rnn
   embedding_size_output : 64  # the embedding size for output (VAE/MLP)
   max_num_node : 200  # max number of nodes in a graph
-  max_prev_node : 15 # max previous node that looks back
+  max_prev_node : null # max previous node that looks back
   batch_size : 32  # normal: 32, and the rest should be changed accordingly
   test_batch_size : 32
   test_total_size : 1000

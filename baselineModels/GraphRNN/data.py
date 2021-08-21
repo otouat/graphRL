@@ -9,7 +9,7 @@ import pickle
 class Graph_to_sequence(Dataset):
     """Graph Dataset"""
 
-    def __init__(self, G_list, max_num_node=None, max_prev_node=None, iteration=20000):
+    def __init__(self, G_list, max_num_node=None, max_prev_node=None, iteration=50000):
         self.adj_all = []
         self.len_all = []
         for G in G_list:

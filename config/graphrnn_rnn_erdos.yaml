@@ -1,6 +1,6 @@
 ---
 exp_name: GraphRNN
-exp_dir: exp/GraphRNN/rnn
+exp_dir: exp/GraphRNN/rnn/erdos
 runner: GraphRnnRunner
 use_horovod: false
 use_gpu: true
