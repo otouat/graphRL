@@ -584,7 +584,6 @@ class GraphRnnRunner(object):
 
         # Training Loop
         iter_count = 0
-        results = defaultdict(list)
         for epoch in range(resume_epoch, self.train_conf.max_epoch):
 
             if self.model_conf.is_mlp :
@@ -597,8 +596,6 @@ class GraphRnnRunner(object):
                            scheduler_rnn, scheduler_output, self.config.model.num_layers)
 
             self.writer.add_scalar('train_loss', train_loss, iter_count)
-            results['train_loss'] += [train_loss]
-            results['train_step'] += [iter_count]
 
             logger.info(
                 "NLL Loss @ epoch {:04d} iteration {:08d} = {}".format(epoch + 1, iter_count, train_loss))
@@ -612,7 +609,6 @@ class GraphRnnRunner(object):
                          scheduler=scheduler_output, graph_model="output")
             torch.cuda.empty_cache()
 
-        pickle.dump(results, open(os.path.join(self.config.save_dir, 'train_stats.p'), 'wb'))
         save_training_runs(time.strftime('%Y-%b-%d-%H-%M-%S'), self.dataset_conf.name,self.num_graphs,self.model_conf.name,
                            self.train_conf.max_epoch, self.config.save_dir)
         self.writer.close()
@@ -639,7 +635,7 @@ class GraphRnnRunner(object):
                           has_output=False).cuda()
 
                 output = MLP_plain(h_size=int(self.model_conf.hidden_size_rnn),
-                                   embedding_size=int(self.model_conf.embedding_size_rnn_output),
+                                   embedding_size=int(self.model_conf.embedding_size_output),
                                    y_size=int(self.model_conf.max_prev_node)).cuda()
             else:
                 rnn = RNN(input_size=int(self.model_conf.max_prev_node),
@@ -655,17 +651,6 @@ class GraphRnnRunner(object):
                              has_output=True, output_size=1).cuda()
 
             # create optimizer
-            params_rnn = filter(lambda p: p.requires_grad, rnn.parameters())
-            params_output = filter(lambda p: p.requires_grad, output.parameters())
-
-            optimizer_rnn = optim.Adam(params_rnn, lr=self.train_conf.lr)
-            optimizer_output = optim.Adam(params_output, lr=self.train_conf.lr)
-
-            scheduler_rnn = optim.lr_scheduler.MultiStepLR(optimizer_rnn, self.train_conf.lr_decay_epoch,
-                                                           gamma=self.train_conf.lr_decay)
-            scheduler_output = optim.lr_scheduler.MultiStepLR(optimizer_output, self.train_conf.lr_decay_epoch,
-                                                              gamma=self.train_conf.lr_decay)
-
             rnn_file = os.path.join(self.config.save_dir, self.test_conf.test_rnn_name)
             output_file = os.path.join(self.config.save_dir, self.test_conf.test_output_name)
             load_model(rnn, rnn_file, self.device)
@@ -676,8 +661,10 @@ class GraphRnnRunner(object):
             num_test_size = int(np.ceil(self.num_test_gen))
             G_pred = []
             if self.model_conf.is_mlp :
-                graphs_gen = test_mlp_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
-                                                   test_batch_size=num_test_size)
+                while len(G_pred) < self.model_conf.test_total_size:
+                    graphs_gen = test_mlp_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
+                                                   test_batch_size=self.model_conf.test_batch_size)
+                    G_pred.extend(graphs_gen)
             else :
                 while len(G_pred) < self.model_conf.test_total_size:
                     graphs_gen = test_rnn_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
