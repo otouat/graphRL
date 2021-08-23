@@ -1,7 +1,7 @@
 ---
-exp_name: GRAN
-exp_dir: exp/GRAN/community4
-runner: GranRunner
+exp_name: GraphRNN
+exp_dir: exp/GraphRNN/mlp/watts
+runner: GraphRnnRunner
 use_horovod: false
 use_gpu: true
 device: cuda:0
@@ -9,9 +9,9 @@ gpus: [0]
 seed: 1234
 dataset:
   loader_name: GRANData
-  name: community4
+  name: watts_ring
   data_path: data
-  node_order: DFS # k_core/BFS/degree_decent
+  node_order: BFS # k_core/BFS/degree_decent
   train_ratio: 0.8
   dev_ratio: 0.2
   num_subgraph_batch: 50 # number of subgraphs per mini-batch
@@ -21,31 +21,31 @@ dataset:
   is_sample_subgraph: true # set to true if you want to sample subgraphs
   is_overwrite_precompute: false
 model:
-  name: GRANMixtureBernoulli
-  num_mix_component: 20
-  is_sym: true
-  block_size: 1
-  sample_stride: 1
-  max_num_nodes: 70
-  hidden_dim: 512
-  embedding_dim: 512
-  num_GNN_layers: 7
-  num_GNN_prop: 1
-  num_canonical_order: 1
-  dimension_reduce: true
-  has_attention: true
-  edge_weight: 1.0e+0
+  name: RNN
+  is_mlp : false
+  hidden_size_rnn : 128  # hidden size for main RNN
+  hidden_size_rnn_output: 16  # hidden size for output RNN
+  embedding_size_rnn : 64  # the size for LSTM input
+  embedding_size_rnn_output : 8  # the embedding size for output rnn
+  embedding_size_output : 64  # the embedding size for output (VAE/MLP)
+  max_num_node : 200  # max number of nodes in a graph
+  max_prev_node : null # max previous node that looks back
+  batch_size : 32  # normal: 32, and the rest should be changed accordingly
+  test_batch_size : 32
+  test_total_size : 1000
+  num_layers : 5
+  batch_ratio : 32
 train:
   optimizer: Adam
   lr_decay: 0.3
-  lr_decay_epoch: [100000000] # no decay
+  lr_decay_epoch: [400, 1000] # no decay
   num_workers: 0
-  max_epoch: 50
+  max_epoch: 1000
   batch_size: 1
   display_iter: 10
-  snapshot_epoch: 50
+  snapshot_epoch: 100
   valid_epoch: 50
-  lr: 1.0e-4
+  lr: 0.001
   wd: 0.0e-4
   momentum: 0.9
   shuffle: true
@@ -63,5 +63,6 @@ test:
   num_vis: 20
   vis_num_row: 5 # visualize `num_vis` samples in `vis_num_row` rows
   better_vis: true
-  test_model_dir: baselineModels/GRAN/exp/GRAN/GRANMixtureBernoulli_erdos_2021-May-26-11-45-19_11008/
-  test_model_name: model_snapshot_0000100.pth
+  test_model_dir: exp/GraphRNN/RNN_erdos_2021-Jun-19-15-49-41_8428/
+  test_rnn_name: rnn_snapshot_0000100.pth
+  test_output_name : output_snapshot_0000100.pth
