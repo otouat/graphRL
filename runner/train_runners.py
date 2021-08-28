@@ -55,6 +55,7 @@ __all__ = ['GranRunner', 'GraphRnnRunner', 'compute_edge_ratio', 'get_graph', 'e
 NPR = np.random.RandomState(seed=1234)
 save_file = 'save_model_learning.csv'
 
+
 def compute_edge_ratio(G_list):
     num_edges_max, num_edges = .0, .0
     for gg in G_list:
@@ -90,8 +91,10 @@ def evaluate(graph_gt, graph_pred, degree_only=True):
 
     return mmd_degree, mmd_clustering, mmd_4orbits, mmd_spectral
 
-def save_training_runs(date,dataset,dataset_num,model,epochs,file_dir):
-    data = [{"Date": date, "dataset_name": dataset,"dataset_num_graphs" :dataset_num, "model_name": model, "num_epochs": epochs, "file_dir": file_dir}]
+
+def save_training_runs(date, dataset, dataset_num, model, epochs, file_dir):
+    data = [{"Date": date, "dataset_name": dataset, "dataset_num_graphs": dataset_num, "model_name": model,
+             "num_epochs": epochs, "file_dir": file_dir}]
 
     if not os.path.isfile(save_file):
         df = pd.DataFrame(data)
@@ -102,6 +105,7 @@ def save_training_runs(date,dataset,dataset_num,model,epochs,file_dir):
     df.to_csv(save_file, mode='a', header=False)
 
     return 1
+
 
 class GranRunner(object):
 
@@ -232,7 +236,7 @@ class GranRunner(object):
 
         # Training Loop
         iter_count = 0
-        #results = defaultdict(list)
+        # results = defaultdict(list)
         for epoch in range(resume_epoch, self.train_conf.max_epoch):
             model.train()
 
@@ -285,8 +289,8 @@ class GranRunner(object):
                 train_loss = float(avg_train_loss.data.cpu().numpy())
 
                 self.writer.add_scalar('train_loss', train_loss, iter_count)
-                #results['train_loss'] += [train_loss]
-                #results['train_step'] += [iter_count]
+                # results['train_loss'] += [train_loss]
+                # results['train_step'] += [iter_count]
 
                 if iter_count % self.train_conf.display_iter == 0 or iter_count == 1:
                     logger.info(
@@ -297,9 +301,10 @@ class GranRunner(object):
                 logger.info("Saving Snapshot @ epoch {:04d}".format(epoch + 1))
                 snapshot(model.module if self.use_gpu else model, optimizer, self.config, epoch + 1,
                          scheduler=lr_scheduler)
-        save_training_runs(time.strftime('%Y-%b-%d-%H-%M-%S'), self.dataset_conf.name,self.num_graphs,self.model_conf.name,
+        save_training_runs(time.strftime('%Y-%b-%d-%H-%M-%S'), self.dataset_conf.name, self.num_graphs,
+                           self.model_conf.name,
                            self.train_conf.max_epoch, self.config.save_dir)
-        #pickle.dump(results, open(os.path.join(self.config.save_dir, 'train_stats.p'), 'wb'))
+        # pickle.dump(results, open(os.path.join(self.config.save_dir, 'train_stats.p'), 'wb'))
         self.writer.close()
 
         return 1
@@ -368,7 +373,7 @@ class GranRunner(object):
             for gg in graphs_pred_vis:
                 CGs = [gg.subgraph(c) for c in nx.connected_components(gg)]
                 CGs = sorted(CGs, key=lambda x: x.number_of_nodes(), reverse=True)
-                if len(CGs)==0:
+                if len(CGs) == 0:
                     continue
                 vis_graphs += [CGs[0]]
 
@@ -401,41 +406,29 @@ class GranRunner(object):
 
         num_nodes_gen = [len(aa) for aa in graphs_gen]
 
-        # Compared with Validation Set
-        num_nodes_dev = [len(gg.nodes) for gg in self.graphs_dev]  # shape B X 1
-        mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev = evaluate(self.graphs_dev, graphs_gen,
-                                                                                         degree_only=False)
-        mmd_num_nodes_dev = compute_mmd([np.bincount(num_nodes_dev)], [np.bincount(num_nodes_gen)], kernel=gaussian_emd)
-
         # Compared with Test Set
-        num_nodes_test = [len(gg.nodes) for gg in self.graphs_test]  # shape B X 1
-        mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs_test,
+        num_nodes_test = [len(gg.nodes) for gg in self.graphs]  # shape B X 1
+        mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs,
                                                                                              graphs_gen,
                                                                                              degree_only=False)
         mmd_num_nodes_test = compute_mmd([np.bincount(num_nodes_test)], [np.bincount(num_nodes_gen)],
                                          kernel=gaussian_emd)
-        results['mmd_num_nodes_dev'] = mmd_num_nodes_dev
-        results['mmd_degree_dev'] = mmd_degree_dev
-        results['mmd_clustering_dev'] = mmd_clustering_dev
-        results['mmd_4orbits_dev'] = mmd_4orbits_dev
-        results['mmd_spectral_dev'] = mmd_spectral_dev
+
         results['mmd_num_nodes_test'] = mmd_num_nodes_test
         results['mmd_degree_test'] = mmd_degree_test
         results['mmd_clustering_test'] = mmd_clustering_test
         results['mmd_4orbits_test'] = mmd_4orbits_test
         results['mmd_spectral_test'] = mmd_spectral_test
 
-        logger.info("Validation MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
-            mmd_num_nodes_dev, mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev))
         logger.info("Test MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
             mmd_num_nodes_test, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test))
 
         pickle.dump(results, open(os.path.join(self.config.save_dir, 'evaluation_stats.p'), 'wb'))
 
         if self.config.dataset.name in ['lobster']:
-            return mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test, acc
+            return mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test, acc
         else:
-            return mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test
+            return mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test
 
 
 class GraphRnnRunner(object):
@@ -533,7 +526,6 @@ class GraphRnnRunner(object):
 
         # create models
 
-
         if self.model_conf.is_mlp:
             rnn = RNN(input_size=int(dataset.max_prev_node),
                       embedding_size=int(self.model_conf.embedding_size_rnn),
@@ -586,14 +578,15 @@ class GraphRnnRunner(object):
         iter_count = 0
         for epoch in range(resume_epoch, self.train_conf.max_epoch):
 
-            if self.model_conf.is_mlp :
-                train_loss,iter_count= train_mlp_epoch_runner(iter_count, rnn, output, train_loader,
-                                                    optimizer_rnn, optimizer_output,
-                                                    scheduler_rnn, scheduler_output)
+            if self.model_conf.is_mlp:
+                train_loss, iter_count = train_mlp_epoch_runner(iter_count, rnn, output, train_loader,
+                                                                optimizer_rnn, optimizer_output,
+                                                                scheduler_rnn, scheduler_output)
             else:
                 train_loss, iter_count = train_rnn_epoch_runner(iter_count, rnn, output, train_loader,
-                           optimizer_rnn, optimizer_output,
-                           scheduler_rnn, scheduler_output, self.config.model.num_layers)
+                                                                optimizer_rnn, optimizer_output,
+                                                                scheduler_rnn, scheduler_output,
+                                                                self.config.model.num_layers)
 
             self.writer.add_scalar('train_loss', train_loss, iter_count)
 
@@ -609,7 +602,8 @@ class GraphRnnRunner(object):
                          scheduler=scheduler_output, graph_model="output")
             torch.cuda.empty_cache()
 
-        save_training_runs(time.strftime('%Y-%b-%d-%H-%M-%S'), self.dataset_conf.name,self.num_graphs,self.model_conf.name,
+        save_training_runs(time.strftime('%Y-%b-%d-%H-%M-%S'), self.dataset_conf.name, self.num_graphs,
+                           self.model_conf.name,
                            self.train_conf.max_epoch, self.config.save_dir)
         self.writer.close()
 
@@ -660,15 +654,15 @@ class GraphRnnRunner(object):
             output.eval()
             num_test_size = int(np.ceil(self.num_test_gen))
             G_pred = []
-            if self.model_conf.is_mlp :
+            if self.model_conf.is_mlp:
                 while len(G_pred) < self.model_conf.test_total_size:
                     graphs_gen = test_mlp_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
-                                                   test_batch_size=self.model_conf.test_batch_size)
+                                                       test_batch_size=self.model_conf.test_batch_size)
                     G_pred.extend(graphs_gen)
-            else :
+            else:
                 while len(G_pred) < self.model_conf.test_total_size:
                     graphs_gen = test_rnn_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
-                                               test_batch_size=self.model_conf.test_batch_size)
+                                                       test_batch_size=self.model_conf.test_batch_size)
                     G_pred.extend(graphs_gen)
             shuffle(G_pred)
         ### Visualize Generated Graphs
@@ -723,38 +717,26 @@ class GraphRnnRunner(object):
 
         num_nodes_gen = [len(aa) for aa in graphs_gen]
 
-        # Compared with Validation Set
-        num_nodes_dev = [len(gg.nodes) for gg in self.graphs_dev]  # shape B X 1
-        mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev = evaluate(self.graphs_dev, graphs_gen,
-                                                                                         degree_only=False)
-        mmd_num_nodes_dev = compute_mmd([np.bincount(num_nodes_dev)], [np.bincount(num_nodes_gen)], kernel=gaussian_emd)
-
         # Compared with Test Set
         num_nodes_test = [len(gg.nodes) for gg in self.graphs_test]  # shape B X 1
-        mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs_test,
+        mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs,
                                                                                              graphs_gen,
                                                                                              degree_only=False)
         mmd_num_nodes_test = compute_mmd([np.bincount(num_nodes_test)], [np.bincount(num_nodes_gen)],
                                          kernel=gaussian_emd)
-        results['mmd_num_nodes_dev']=mmd_num_nodes_dev
-        results['mmd_degree_dev'] = mmd_degree_dev
-        results['mmd_clustering_dev'] = mmd_clustering_dev
-        results['mmd_4orbits_dev'] = mmd_4orbits_dev
-        results['mmd_spectral_dev'] = mmd_spectral_dev
+
         results['mmd_num_nodes_test'] = mmd_num_nodes_test
         results['mmd_degree_test'] = mmd_degree_test
         results['mmd_clustering_test'] = mmd_clustering_test
         results['mmd_4orbits_test'] = mmd_4orbits_test
         results['mmd_spectral_test'] = mmd_spectral_test
 
-        logger.info("Validation MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
-            mmd_num_nodes_dev, mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev))
         logger.info("Test MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
             mmd_num_nodes_test, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test))
 
         pickle.dump(results, open(os.path.join(self.config.save_dir, 'evaluation_stats.p'), 'wb'))
 
         if self.config.dataset.name in ['lobster']:
-            return mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test, acc
+            return mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test, acc
         else:
-            return mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test
+            return mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test

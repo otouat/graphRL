@@ -271,6 +271,14 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
         for i in range(100,200):
             for j in range(5):
                 graphs.append(nx.watts_strogatz_graph(i,2,0.1))
+    elif graph_type=='watts_ring':
+        for i in range(100,200):
+            for j in range(5):
+                graphs.append(nx.watts_strogatz_graph(i,2,0.0))
+    elif graph_type=='watts_ring_big':
+        for i in range(2000,2010):
+            for j in range(5):
+                graphs.append(nx.watts_strogatz_graph(i,2,0.0))
 
     num_nodes = [gg.number_of_nodes() for gg in graphs]
     num_edges = [gg.number_of_edges() for gg in graphs]
