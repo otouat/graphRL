@@ -49,7 +49,7 @@ class Graph_to_sequence(Dataset):
         G = nx.from_numpy_matrix(adj_copy_matrix)
         # then do bfs in the permuted G
         start_idx = np.random.randint(adj_copy.shape[0])
-        x_idx = np.array(bfs_seq(G, start_idx))
+        x_idx = np.array(order_seq(G, start_idx))
         adj_copy = adj_copy[np.ix_(x_idx, x_idx)]
         adj_encoded = encode_adj(adj_copy.copy(), max_prev_node=self.max_prev_node)
         # get x and y and adj
@@ -72,7 +72,7 @@ class Graph_to_sequence(Dataset):
             G = nx.from_numpy_matrix(adj_copy_matrix)
             # then do bfs in the permuted G
             start_idx = np.random.randint(adj_copy.shape[0])
-            x_idx = np.array(bfs_seq(G, start_idx))
+            x_idx = np.array(order_seq(G, start_idx))
             adj_copy = adj_copy[np.ix_(x_idx, x_idx)]
             # encode adj
             adj_encoded = encode_adj_flexible(adj_copy.copy())
@@ -83,15 +83,56 @@ class Graph_to_sequence(Dataset):
         max_prev_node = sorted(max_prev_node)[-1 * topk:]
         return max_prev_node
 
+class Graph_sequence_sampler_pytorch_dfs(torch.utils.data.Dataset):
+    def __init__(self, G_list,max_prev_node, max_num_node=None):
+        self.adj_all = []
+        self.len_all = []
+        for G in G_list:
+            self.adj_all.append(np.asarray(nx.to_numpy_matrix(G)))
+            self.len_all.append(G.number_of_nodes())
+        if max_num_node is None:
+            self.n = max(self.len_all)
+        else:
+            self.n = max_num_node
+        self.max_prev_node=max_prev_node
+    def __len__(self):
+        return len(self.adj_all)
+    def __getitem__(self, idx):
+        adj_copy = self.adj_all[idx].copy()
+        x_batch = np.zeros((self.n, self.max_prev_node))  # here zeros are padded for small graph
+        x_batch[0,:] = 1 # the first input token is all ones
+        y_batch = np.zeros((self.n, self.max_prev_node))  # here zeros are padded for small graph
+        # generate input x, y pairs
+        len_batch = adj_copy.shape[0]
+        x_idx = np.random.permutation(adj_copy.shape[0])
+        adj_copy = adj_copy[np.ix_(x_idx, x_idx)]
+        # create a numpy matrix G
+        adj_copy_matrix = np.asmatrix(adj_copy)
+        G = nx.from_numpy_matrix(adj_copy_matrix)
+        # then do bfs in the permuted G
+        start_idx = np.random.randint(adj_copy.shape[0])
+        x_idx = np.array(order_seq(G, start_idx, "dfs"))
+        adj_copy = adj_copy[np.ix_(x_idx, x_idx)]
+        adj_encoded = encode_adj(adj_copy.copy(), max_prev_node=self.max_prev_node)
+        # get x and y and adj
+        # for small graph the rest are zero padded
+        y_batch[0:adj_encoded.shape[0], :] = adj_encoded
+        x_batch[1:adj_encoded.shape[0] + 1, :] = adj_encoded
+        return {'x':x_batch,'y':y_batch, 'len':len_batch}
 
-def bfs_seq(G, start_id):
+
+def order_seq(G, start_id, ordering="bfs"):
     '''
-    get a bfs node sequence
+    get a bfs or dfs node sequence
+    :param ordering:
     :param G:
     :param start_id:
     :return:
     '''
-    dictionary = dict(nx.bfs_successors(G, start_id))
+    if ordering=="bfs":
+        dictionary = dict(nx.bfs_successors(G, start_id))
+    elif ordering=="dfs":
+        return list(nx.dfs_tree(G,start_id).nodes())
     start = [start_id]
     output = [start_id]
     while len(start) > 0:
@@ -220,7 +261,7 @@ def test_encode_decode_adj():
     G = nx.from_numpy_matrix(adj)
     #
     start_idx = np.random.randint(adj.shape[0])
-    x_idx = np.array(bfs_seq(G, start_idx))
+    x_idx = np.array(order_seq(G, start_idx))
     adj = adj[np.ix_(x_idx, x_idx)]
 
     print('adj\n', adj)
@@ -295,7 +336,7 @@ def test_encode_decode_adj_full():
     adj = np.asarray(nx.to_numpy_matrix(G))
     G = nx.from_numpy_matrix(adj)
     start_idx = np.random.randint(adj.shape[0])
-    x_idx = np.array(bfs_seq(G, start_idx))
+    x_idx = np.array(order_seq(G, start_idx))
     adj = adj[np.ix_(x_idx, x_idx)]
 
     adj_output, adj_len = encode_adj_full(adj)
