@@ -24,3 +24,4 @@ dependencies:
       - pytz==2021.1
       - tensorboard_logger
       - pyemd
+      - gym
