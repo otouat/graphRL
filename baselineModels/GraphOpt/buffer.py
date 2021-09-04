@@ -7,7 +7,7 @@ class ReplayBuffer():
         self.memory_counter=0
         self.state_memory = np.zeros((self.memory_size, *input_shape))
         self.new_state_memory = np.zeros((self.memory_size, *input_shape))
-        self.action_memory = np.zeros(self.memory_size, n_actions)
+        self.action_memory = np.zeros((self.memory_size, n_actions))
         self.reward_memory = np.zeros(self.memory_size)
         self.terminal_memory = np.zeros(self.memory_size,dtype=np.bool)
 
@@ -25,12 +25,12 @@ class ReplayBuffer():
     def sample_buffer(self,batch_size):
         max_memory=min(self.memory_size,self.memory_counter)
 
-        batch = np,random.choice(max_memory,batch_size)
+        batch = np.random.choice(max_memory,batch_size)
 
         states=self.state_memory[batch]
-        states_= self.state_memory[batch]
-        actions= self.state_memory[batch]
-        rewards=self.state_memory[batch]
+        states_= self.new_state_memory[batch]
+        actions= self.action_memory[batch]
+        rewards=self.reward_memory[batch]
         dones = self.terminal_memory[batch]
         
         return states,actions,rewards,states_, dones

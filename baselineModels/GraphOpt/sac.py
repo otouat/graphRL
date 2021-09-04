@@ -85,7 +85,7 @@ class Agent():
 
         self.value.optimizer.zero_grad()
         value_target= critic_value - log_probs
-        value_loss = 0.5*F.mse_loss(self.value,value_target)
+        value_loss = 0.5*F.mse_loss(value,value_target)
         value_loss.backward(retain_graph=True)
         self.value.optimizer.step()
 
