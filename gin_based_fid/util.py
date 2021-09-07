@@ -223,7 +223,7 @@ def load_graph_asS2Vgraph(graph_list,label):
     mapped = len(label_dict)
     label_dict[label] = mapped
     for k in range(len(graph_list)):
-        g_list.append(g[k], 4, [0] * sum(g.number_of_nodes()))
+        g_list.append(graph_list[k], label, [0] * sum(g_list.number_of_nodes()))
     
     # add labels and edge_mat
     for g in g_list:
