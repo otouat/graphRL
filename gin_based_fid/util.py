@@ -143,23 +143,26 @@ def load_synth_data(degree_as_tag):
     c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 2)
     mapped = len(label_dict)
     label_dict[1] = mapped
-    for k in range(500):
-        g_list.append(S2VGraph(n_community(c_sizes, p_inter=0.01), 1, [0] * sum(c_sizes)))
-    c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 4)
+
+    for i in range(100, 200):
+        for k in range(5):
+            g_list.append(S2VGraph(nx.erdos_renyi_graph(i, random.uniform(0.1,0.35)),1, [0] * i))
     mapped = len(label_dict)
     label_dict[2] = mapped
-    for k in range(500):
-        g_list.append(S2VGraph(n_community(c_sizes, p_inter=0.01), 2, [0] * sum(c_sizes)))
-    c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 8)
+    for i in range(100, 200):
+            for j in range(4, 5):
+                for k in range(5):
+                    g_list.append(S2VGraph(nx.barabasi_albert_graph(i, j),2, [0] * i))
+    c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 4)
     mapped = len(label_dict)
     label_dict[3] = mapped
     for k in range(500):
         g_list.append(S2VGraph(n_community(c_sizes, p_inter=0.01), 3, [0] * sum(c_sizes)))
-    c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 16)
     mapped = len(label_dict)
     label_dict[4] = mapped
-    for k in range(500):
-        g_list.append(S2VGraph(n_community(c_sizes, p_inter=0.01), 4, [0] * sum(c_sizes)))
+    for i in range(100, 200):
+            for j in range(5):
+                g_list.append(S2VGraph(nx.watts_strogatz_graph(i, 2, 0.1), 4, [0] * i))
     c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 32)
     mapped = len(label_dict)
     label_dict[5] = mapped
@@ -167,9 +170,6 @@ def load_synth_data(degree_as_tag):
     for k in range(500):
         g_list.append(S2VGraph(n_community(c_sizes, p_inter=0.01), 5, [0] * sum(c_sizes)))
     
-    
-
-
     # add labels and edge_mat
     for g in g_list:
         g.neighbors = [[] for i in range(len(g.g))]
@@ -214,6 +214,59 @@ def load_synth_data(degree_as_tag):
 
     return g_list, len(label_dict)
 
+
+def load_graph_asS2Vgraph(graph_list,label):
+    """Convert the nx.Graph list into a S2vGraph list ( preparing for GIN )"""
+    g_list = []
+    label_dict = {}
+    feat_dict = {}
+    mapped = len(label_dict)
+    label_dict[label] = mapped
+    for k in range(len(graph_list)):
+        g_list.append(g[k], 4, [0] * sum(g.number_of_nodes()))
+    
+    # add labels and edge_mat
+    for g in g_list:
+        g.neighbors = [[] for i in range(len(g.g))]
+        for i, j in g.g.edges():
+            g.neighbors[i].append(j)
+            g.neighbors[j].append(i)
+        degree_list = []
+        for i in range(len(g.g)):
+            g.neighbors[i] = g.neighbors[i]
+            degree_list.append(len(g.neighbors[i]))
+        g.max_neighbor = max(degree_list)
+
+        g.label = label_dict[g.label]
+
+        edges = [list(pair) for pair in g.g.edges()]
+        edges.extend([[i, j] for j, i in edges])
+
+        deg_list = list(dict(g.g.degree(range(len(g.g)))).values())
+        g.edge_mat = torch.LongTensor(edges).transpose(0, 1)
+
+    for g in g_list:
+        g.node_tags = list(dict(g.g.degree).values())
+
+    # Extracting unique tag labels
+    tagset = set([])
+    for g in g_list:
+        tagset = tagset.union(set(g.node_tags))
+
+    tagset = list(tagset)
+    tag2index = {tagset[i]: i for i in range(len(tagset))}
+
+    for g in g_list:
+        g.node_features = torch.zeros(len(g.node_tags), len(tagset))
+        g.node_features[range(len(g.node_tags)), [tag2index[tag]
+                                                  for tag in g.node_tags]] = 1
+
+    print('# classes: %d' % len(label_dict))
+    print('# maximum node tag: %d' % len(tagset))
+
+    print("# data: %d" % len(g_list))
+
+    return g_list, len(label_dict)
 
 def separate_data(graph_list, seed, fold_idx):
     assert 0 <= fold_idx and fold_idx < 10, "fold_idx must be from 0 to 9."
