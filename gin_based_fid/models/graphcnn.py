@@ -214,7 +214,6 @@ class GraphCNN(nn.Module):
                 h = self.next_layer(h, layer, padded_neighbor_list = padded_neighbor_list)
             elif not self.neighbor_pooling_type == "max" and not self.learn_eps:
                 h = self.next_layer(h, layer, Adj_block = Adj_block)
-
             hidden_rep.append(h)
 
         score_over_layer = 0
@@ -225,3 +224,67 @@ class GraphCNN(nn.Module):
             score_over_layer += F.dropout(self.linears_prediction[layer](pooled_h), self.final_dropout, training = self.training)
 
         return score_over_layer
+
+    def get_graph_embed_sum(self, g):
+        self.eval()
+        h = torch.cat([graph.node_features for graph in g], 0).to(self.device)
+        graph_pool = self.__preprocess_graphpool(g)
+
+        if self.neighbor_pooling_type == "max":
+            padded_neighbor_list = self.__preprocess_neighbors_maxpool(g)
+        else:
+            Adj_block = self.__preprocess_neighbors_sumavepool(g)
+
+        with torch.no_grad():
+            # return self.forward(g, h).detach().numpy()
+            hidden_rep = []
+            for layer in range(self.num_layers - 1):
+                if self.neighbor_pooling_type == "max" and self.learn_eps:
+                    h = self.next_layer_eps(h, layer, padded_neighbor_list=padded_neighbor_list)
+                elif not self.neighbor_pooling_type == "max" and self.learn_eps:
+                    h = self.next_layer_eps(h, layer, Adj_block=Adj_block)
+                elif self.neighbor_pooling_type == "max" and not self.learn_eps:
+                    h = self.next_layer(h, layer, padded_neighbor_list=padded_neighbor_list)
+                elif not self.neighbor_pooling_type == "max" and not self.learn_eps:
+                    h = self.next_layer(h, layer, Adj_block=Adj_block)
+                hidden_rep.append(h)
+
+            # perform pooling over all nodes in each graph in every layer
+            graph_embed = 0
+            for layer, h in enumerate(hidden_rep):
+                pooled_h = torch.spmm(graph_pool, h)
+                graph_embed += pooled_h
+
+            return graph_embed
+
+    def get_graph_embed_concat(self, g):
+        self.eval()
+        h = torch.cat([graph.node_features for graph in g], 0).to(self.device)
+        graph_pool = self.__preprocess_graphpool(g)
+
+        if self.neighbor_pooling_type == "max":
+            padded_neighbor_list = self.__preprocess_neighbors_maxpool(g)
+        else:
+            Adj_block = self.__preprocess_neighbors_sumavepool(g)
+
+        with torch.no_grad():
+            # return self.forward(g, h).detach().numpy()
+            hidden_rep = []
+            for layer in range(self.num_layers - 1):
+                if self.neighbor_pooling_type == "max" and self.learn_eps:
+                    h = self.next_layer_eps(h, layer, padded_neighbor_list=padded_neighbor_list)
+                elif not self.neighbor_pooling_type == "max" and self.learn_eps:
+                    h = self.next_layer_eps(h, layer, Adj_block=Adj_block)
+                elif self.neighbor_pooling_type == "max" and not self.learn_eps:
+                    h = self.next_layer(h, layer, padded_neighbor_list=padded_neighbor_list)
+                elif not self.neighbor_pooling_type == "max" and not self.learn_eps:
+                    h = self.next_layer(h, layer, Adj_block=Adj_block)
+                hidden_rep.append(h)
+
+            # perform pooling over all nodes in each graph in every layer
+            graph_embed = 0
+            for layer, h in enumerate(hidden_rep):
+                pooled_h = torch.spmm(graph_pool, h)
+                graph_embed = torch.cat([graph_embed, pooled_h], dim=1)
+
+            return graph_embed

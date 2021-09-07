@@ -432,8 +432,6 @@ def test_mlp_epoch(epoch, args, rnn, output, test_batch_size=16, save_histogram=
 
 def test_rnn_epoch_runner(epoch, model_conf, rnn, output, test_batch_size=16):
     rnn.hidden = rnn.init_hidden(test_batch_size)
-    rnn.eval()
-    output.eval()
 
     # generate graphs
     max_num_node = int(model_conf.max_num_node)
@@ -469,9 +467,6 @@ def test_rnn_epoch_runner(epoch, model_conf, rnn, output, test_batch_size=16):
 
 def test_mlp_epoch_runner(epoch, model_conf, rnn, output, test_batch_size=16, save_histogram=False, sample_time=1):
     rnn.hidden = rnn.init_hidden(test_batch_size)
-    rnn.eval()
-    output.eval()
-
     # generate graphs
     max_num_node = int(model_conf.max_num_node)
     y_pred = Variable(

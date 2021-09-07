@@ -126,7 +126,7 @@ class GranRunner(object):
         self.vis_num_row = config.test.vis_num_row
         self.is_single_plot = config.test.is_single_plot
         self.num_gpus = len(self.gpus)
-        self.is_shuffle = False
+        self.is_shuffle = True
 
         assert self.use_gpu == True
 
@@ -450,7 +450,7 @@ class GraphRnnRunner(object):
         self.vis_num_row = config.test.vis_num_row
         self.is_single_plot = config.test.is_single_plot
         self.num_gpus = len(self.gpus)
-        self.is_shuffle = False
+        self.is_shuffle = True
 
         assert self.use_gpu == True
 
@@ -509,9 +509,14 @@ class GraphRnnRunner(object):
     def train(self):
         ### create data loader
         # train_dataset = eval(self.dataset_conf.loader_name)(self.config, self.graphs_train, tag='train')
-
-        dataset = Graph_to_sequence(self.graphs_train, max_prev_node=self.model_conf.max_prev_node,
-                                    max_num_node=self.max_num_nodes)
+        max_prev_node = self.model_conf.max_prev_node
+        if self.dataset_conf.node_order == "BFS":
+            dataset = Graph_to_sequence(self.graphs_train, max_prev_node=self.model_conf.max_prev_node,
+                                        max_num_node=self.max_num_nodes)
+            max_prev_node = dataset.max_prev_node
+        elif self.dataset_conf.node_order == "DFS":
+            dataset = Graph_sequence_sampler_pytorch_dfs(self.graphs_train, max_prev_node,
+                                                         max_num_node=self.max_num_nodes)
         sample_strategy = torch.utils.data.sampler.WeightedRandomSampler(
             [1.0 / len(dataset) for i in range(len(dataset))],
             num_samples=self.model_conf.batch_size * self.model_conf.batch_ratio,
@@ -524,10 +529,8 @@ class GraphRnnRunner(object):
             sampler=sample_strategy
         )
 
-        # create models
-
         if self.model_conf.is_mlp:
-            rnn = RNN(input_size=int(dataset.max_prev_node),
+            rnn = RNN(input_size=int(max_prev_node),
                       embedding_size=int(self.model_conf.embedding_size_rnn),
                       hidden_size=int(self.model_conf.hidden_size_rnn), num_layers=int(self.model_conf.num_layers),
                       has_input=True,
@@ -535,9 +538,9 @@ class GraphRnnRunner(object):
 
             output = MLP_plain(h_size=int(self.model_conf.hidden_size_rnn),
                                embedding_size=int(self.model_conf.embedding_size_output),
-                               y_size=int(dataset.max_prev_node)).cuda()
+                               y_size=int(max_prev_node)).cuda()
         else:
-            rnn = RNN(input_size=int(dataset.max_prev_node),
+            rnn = RNN(input_size=int(max_prev_node),
                       embedding_size=int(self.model_conf.embedding_size_rnn),
                       hidden_size=int(self.model_conf.hidden_size_rnn), num_layers=int(self.model_conf.num_layers),
                       has_input=True,
@@ -609,7 +612,7 @@ class GraphRnnRunner(object):
 
         return 1
 
-    def test(self):
+    def test(self, epoch_num=None, during_training=False):
         self.config.save_dir = self.test_conf.test_model_dir
 
         ### Compute Erdos-Renyi baseline
@@ -652,18 +655,19 @@ class GraphRnnRunner(object):
 
             rnn.eval()
             output.eval()
-            num_test_size = int(np.ceil(self.num_test_gen))
+            num_test_batch = int(np.ceil(self.num_test_gen / self.test_conf.batch_size))
             G_pred = []
-            if self.model_conf.is_mlp:
-                while len(G_pred) < self.model_conf.test_total_size:
-                    graphs_gen = test_mlp_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
-                                                       test_batch_size=self.model_conf.test_batch_size)
-                    G_pred.extend(graphs_gen)
-            else:
-                while len(G_pred) < self.model_conf.test_total_size:
-                    graphs_gen = test_rnn_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
-                                                       test_batch_size=self.model_conf.test_batch_size)
-                    G_pred.extend(graphs_gen)
+            for i in tqdm(range(num_test_batch)):
+                with torch.no_grad():
+                    if self.model_conf.is_mlp:
+                        graphs_gen = test_mlp_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
+                                                           test_batch_size=self.test_conf.batch_size)
+                        G_pred.extend(graphs_gen)
+                    else:
+                        graphs_gen = test_rnn_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
+                                                           test_batch_size=self.test_conf.batch_size)
+                        G_pred.extend(graphs_gen)
+
             shuffle(G_pred)
         ### Visualize Generated Graphs
         if self.is_vis:
@@ -674,7 +678,7 @@ class GraphRnnRunner(object):
             save_name = os.path.join(self.config.save_dir, '{}_gen_graphs_epoch_{}.png'.format(
                 self.config.test.test_rnn_name[:-4], test_epoch))
 
-            # remove isolated nodes for better visulization
+            # remove isolated nodes for better visualization
             graphs_pred_vis = [copy.deepcopy(gg) for gg in graphs_gen[:self.num_vis]]
 
             if self.better_vis:
@@ -717,9 +721,15 @@ class GraphRnnRunner(object):
 
         num_nodes_gen = [len(aa) for aa in graphs_gen]
 
+        # Compared with Validation Set
+        num_nodes_dev = [len(gg.nodes) for gg in self.graphs_dev]  # shape B X 1
+        mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev = evaluate(self.graphs_dev, graphs_gen,
+                                                                                         degree_only=False)
+        mmd_num_nodes_dev = compute_mmd([np.bincount(num_nodes_dev)], [np.bincount(num_nodes_gen)], kernel=gaussian_emd)
+
         # Compared with Test Set
         num_nodes_test = [len(gg.nodes) for gg in self.graphs_test]  # shape B X 1
-        mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs,
+        mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs_test,
                                                                                              graphs_gen,
                                                                                              degree_only=False)
         mmd_num_nodes_test = compute_mmd([np.bincount(num_nodes_test)], [np.bincount(num_nodes_gen)],
@@ -730,13 +740,20 @@ class GraphRnnRunner(object):
         results['mmd_clustering_test'] = mmd_clustering_test
         results['mmd_4orbits_test'] = mmd_4orbits_test
         results['mmd_spectral_test'] = mmd_spectral_test
+        results['mmd_num_nodes_dev'] = mmd_num_nodes_test
+        results['mmd_degree_dev'] = mmd_degree_dev
+        results['mmd_clustering_dev'] = mmd_clustering_dev
+        results['mmd_4orbits_dev'] = mmd_4orbits_dev
+        results['mmd_spectral_dev'] = mmd_spectral_dev
 
+        logger.info("Validation MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
+            mmd_num_nodes_dev, mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev))
         logger.info("Test MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
             mmd_num_nodes_test, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test))
 
         pickle.dump(results, open(os.path.join(self.config.save_dir, 'evaluation_stats.p'), 'wb'))
 
         if self.config.dataset.name in ['lobster']:
-            return mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test, acc
+            return mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test, acc
         else:
-            return mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test
+            return mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test
