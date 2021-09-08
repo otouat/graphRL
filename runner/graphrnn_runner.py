@@ -341,7 +341,7 @@ class GraphRnnRunner(object):
 
             rnn.eval()
             output.eval()
-            num_test_batch = int(np.ceil(self.num_test_gen / self.test_conf.batch_size))
+            num_test_batch = int(np.ceil(len(self.graphs_dev)  / self.test_conf.batch_size))
             G_pred = []
             for i in tqdm(range(num_test_batch)):
                 with torch.no_grad():
@@ -448,7 +448,7 @@ class GraphRnnRunner(object):
 
         rnn.eval()
         output.eval()
-        num_test_batch = int(np.ceil(self.num_test_gen / self.test_conf.batch_size))
+        num_test_batch = int(np.ceil(len(self.graphs_dev) / self.test_conf.batch_size))
         G_pred = []
         for i in tqdm(range(num_test_batch)):
             with torch.no_grad():
