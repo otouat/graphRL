@@ -383,8 +383,8 @@ class DgmgRunner(object):
                     break
 
                 edge_count = 0
-                while edge_count < args.max_num_node:
-                    if not is_fast:
+                while edge_count < self.max_num_nodes:
+                    if not self.model_conf.is_fast:
                         node_embedding = message_passing(node_neighbor, node_embedding, model)
                         node_embedding_cat = torch.cat(node_embedding, dim=0)
                         graph_embedding = calc_graph_embedding(node_embedding_cat, model)

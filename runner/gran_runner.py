@@ -158,7 +158,7 @@ class GranRunner(object):
         logger.info('No Edges vs. Edges in training set = {}'.format(
             self.config.dataset.sparse_ratio))
 
-        self.num_nodes_pmf_train = np.bincount([len(gg.nodes) for gg in self.graphs_train])
+        self.num_nodes_pmf_train = np.bincount([gg.number_of_nodes() for gg in self.graphs_train])
         self.max_num_nodes = len(self.num_nodes_pmf_train)
         self.num_nodes_pmf_train = self.num_nodes_pmf_train / self.num_nodes_pmf_train.sum()
 
@@ -471,13 +471,13 @@ class GranRunner(object):
         num_nodes_gen = [len(aa) for aa in graphs_gen]
 
         # Compared with Validation Set
-        num_nodes_dev = [len(gg.nodes) for gg in self.graphs_dev]  # shape B X 1
+        num_nodes_dev = [gg.number_of_nodes() for gg in self.graphs_dev]  # shape B X 1
         mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev = evaluate(self.graphs_dev, graphs_gen,
                                                                                          degree_only=False)
         mmd_num_nodes_dev = compute_mmd([np.bincount(num_nodes_dev)], [np.bincount(num_nodes_gen)], kernel=gaussian_emd)
 
         # Compared with Test Set
-        num_nodes_test = [len(gg.nodes) for gg in self.graphs_test]  # shape B X 1
+        num_nodes_test = [gg.number_of_nodes() for gg in self.graphs_test]  # shape B X 1
         mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs_test,
                                                                                              graphs_gen,
                                                                                              degree_only=False)

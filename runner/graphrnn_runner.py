@@ -158,7 +158,7 @@ class GraphRnnRunner(object):
         logger.info('No Edges vs. Edges in training set = {}'.format(
             self.config.dataset.sparse_ratio))
 
-        self.num_nodes_pmf_train = np.bincount([len(gg.nodes) for gg in self.graphs_train])
+        self.num_nodes_pmf_train = np.bincount([gg.number_of_nodes() for gg in self.graphs_train])
         self.max_num_nodes = len(self.num_nodes_pmf_train)
         self.num_nodes_pmf_train = self.num_nodes_pmf_train / self.num_nodes_pmf_train.sum()
 

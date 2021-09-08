@@ -17,6 +17,22 @@ import math
 import numpy as np
 import time
 
+def gumbel_softmax(logits, temperature, eps=1e-9):
+    '''
+    :param logits: shape: N*L
+    :param temperature:
+    :param eps:
+    :return:
+    '''
+    # get gumbel noise
+    noise = torch.rand(logits.size())
+    noise.add_(eps).log_().neg_()
+    noise.add_(eps).log_().neg_()
+    noise = Variable(noise).cuda()
+
+    x = (logits + noise) / temperature
+    x = F.softmax(x)
+    return x
 
 def sample_tensor(y, sample=True, thresh=0.5):
     # do sampling
