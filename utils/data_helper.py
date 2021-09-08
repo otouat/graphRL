@@ -7,7 +7,6 @@ import os
 import torch
 import pickle
 import numpy as np
-from networkx.algorithms.community import LFR_benchmark_graph
 from scipy import sparse as sp
 import networkx as nx
 import torch.nn.functional as F
@@ -256,13 +255,6 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
         # c_sizes = [15] * 4
         for k in range(500):
             graphs.append(n_community(c_sizes, p_inter=0.01))
-    elif graph_type == 'community_lfr':
-        c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 4)
-        # c_sizes = [15] * num_communities
-        for k in range(100, 200):
-            G = LFR_benchmark_graph(n=k, tau1=3, tau2=1.5, mu=0.1, average_degree=5, min_community=25, seed=10)
-            # G.remove_edges_from(nx.selfloop_edges(G))
-            graphs.append(G)
     elif graph_type == 'watts':
         for i in range(100, 200):
             for j in range(5):

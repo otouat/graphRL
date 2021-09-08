@@ -1,7 +1,7 @@
 ---
-exp_name: GRAN
-exp_dir: exp/GRAN/community2
-runner: GranRunner
+exp_name: DGM
+exp_dir: exp/DGM/community2
+runner: DgmgRunner
 use_horovod: false
 use_gpu: true
 device: cuda:0
@@ -21,31 +21,20 @@ dataset:
   is_sample_subgraph: true # set to true if you want to sample subgraphs
   is_overwrite_precompute: false
 model:
-  name: GRANMixtureBernoulli
-  num_mix_component: 20
-  is_sym: true
-  block_size: 1
-  sample_stride: 1
-  max_num_nodes: 35
-  hidden_dim: 512
-  embedding_dim: 512
-  num_GNN_layers: 7
-  num_GNN_prop: 1
-  num_canonical_order: 1
-  dimension_reduce: true
-  has_attention: true
-  edge_weight: 1.0e+0
+  name: DGM_graphs
+  node_embedding_size: 64
+  is_fast: True
 train:
   optimizer: Adam
   lr_decay: 0.3
-  lr_decay_epoch: [100000000] # no decay
+  lr_decay_epoch: [300, 600, 1000] # no decay
   num_workers: 0
   max_epoch: 1
   batch_size: 1
   display_iter: 10
   snapshot_epoch: 1
   valid_epoch: 50
-  lr: 1.0e-4
+  lr: 1.0e-3
   wd: 0.0e-4
   momentum: 0.9
   shuffle: true
@@ -54,7 +43,6 @@ train:
   resume_dir: # exp/GRAN/your_exp_folder
   resume_model: model_snapshot_0005000.pth
 test:
-  batch_size: 20
   num_workers: 4
   num_test_gen: 20 # number of generated samples
   is_vis: true

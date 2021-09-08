@@ -351,7 +351,7 @@ class GraphCNN(nn.Module):
                 hidden_rep.append(h)
 
             # perform pooling over all nodes in each graph in every layer
-            graph_embed = 0
+            graph_embed = torch.Tensor([])
             for layer, h in enumerate(hidden_rep):
                 pooled_h = torch.spmm(graph_pool, h)
                 graph_embed = torch.cat([graph_embed, pooled_h], dim=1)

@@ -143,16 +143,15 @@ def load_synth_data(degree_as_tag):
     c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 2)
     mapped = len(label_dict)
     label_dict[1] = mapped
-
     for i in range(100, 200):
-        for k in range(5):
+        for k in range(4,5):
             g_list.append(S2VGraph(nx.erdos_renyi_graph(i, random.uniform(0.1,0.35)),1, [0] * i))
     mapped = len(label_dict)
     label_dict[2] = mapped
     for i in range(100, 200):
-            for j in range(4, 5):
-                for k in range(5):
-                    g_list.append(S2VGraph(nx.barabasi_albert_graph(i, j),2, [0] * i))
+        for j in range(4, 5):
+            for k in range(5):
+                g_list.append(S2VGraph(nx.barabasi_albert_graph(i, j),2, [0] * i))
     c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 4)
     mapped = len(label_dict)
     label_dict[3] = mapped
@@ -161,12 +160,11 @@ def load_synth_data(degree_as_tag):
     mapped = len(label_dict)
     label_dict[4] = mapped
     for i in range(100, 200):
-            for j in range(5):
-                g_list.append(S2VGraph(nx.watts_strogatz_graph(i, 2, 0.1), 4, [0] * i))
+        for j in range(5):
+            g_list.append(S2VGraph(nx.watts_strogatz_graph(i, 2, 0.1), 4, [0] * i))
     c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 32)
     mapped = len(label_dict)
     label_dict[5] = mapped
-        #c_sizes = [15] * 4
     for k in range(500):
         g_list.append(S2VGraph(n_community(c_sizes, p_inter=0.01), 5, [0] * sum(c_sizes)))
     
@@ -223,7 +221,7 @@ def load_graph_asS2Vgraph(graph_list,label):
     mapped = len(label_dict)
     label_dict[label] = mapped
     for k in range(len(graph_list)):
-        g_list.append(graph_list[k], label, [0] * sum(g_list.number_of_nodes()))
+        g_list.append(S2VGraph(graph_list[k], label, [0] * graph_list[k].number_of_nodes()))
     
     # add labels and edge_mat
     for g in g_list:
@@ -255,11 +253,10 @@ def load_graph_asS2Vgraph(graph_list,label):
 
     tagset = list(tagset)
     tag2index = {tagset[i]: i for i in range(len(tagset))}
-
+    
     for g in g_list:
         g.node_features = torch.zeros(len(g.node_tags), len(tagset))
-        g.node_features[range(len(g.node_tags)), [tag2index[tag]
-                                                  for tag in g.node_tags]] = 1
+        g.node_features[range(len(g.node_tags)), [tag2index[tag] for tag in g.node_tags]] = 1
 
     print('# classes: %d' % len(label_dict))
     print('# maximum node tag: %d' % len(tagset))

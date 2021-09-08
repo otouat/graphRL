@@ -284,7 +284,7 @@ def orca(graph):
     f.close()
 
     output = sp.check_output(
-        ['./utils/orca/orca.exe', 'node', '4', 'utils/orca/tmp.txt', 'std'])
+        ['./utils/orca/orca', 'node', '4', 'utils/orca/tmp.txt', 'std'])
     output = output.decode('utf8').strip()
     idx = output.find(COUNT_START_STR) + len(COUNT_START_STR) + 2
     output = output[idx:]
