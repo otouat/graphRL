@@ -181,7 +181,8 @@ class DgmgRunner(object):
         model = DGM_graphs(h_size=self.model_conf.node_embedding_size).cuda()
         # initialize optimizer
         optimizer = optim.Adam(list(model.parameters()), lr=self.train_conf.lr)
-        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=self.train_conf.lr_decay_epoch, gamma=self.train_conf.lr_decay)
+        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=self.train_conf.lr_decay_epoch,
+                                                   gamma=self.train_conf.lr_decay)
 
         # reset gradient
         optimizer.zero_grad()
@@ -193,10 +194,11 @@ class DgmgRunner(object):
 
         while epoch <= self.train_conf.max_epoch:
             # train
-            train_loss = train_DGMG_epoch(self.model_conf.node_embedding_size, model, self.graphs_train, optimizer, scheduler, is_fast=self.model_conf.is_fast)
+            train_loss = train_DGMG_epoch(self.model_conf.node_embedding_size, model, self.graphs_train, optimizer,
+                                          scheduler, is_fast=self.model_conf.is_fast)
             self.writer.add_scalar('train_loss', train_loss)
             logger.info(
-                "NLL Loss @ epoch {:04d} = {}".format(epoch + 1,train_loss))
+                "NLL Loss @ epoch {:04d} = {}".format(epoch + 1, train_loss))
             # test
             if (epoch + 1) % self.train_conf.snapshot_epoch == 0:
                 dict_stat_epoch = self.test_training(model, epoch)
@@ -211,7 +213,7 @@ class DgmgRunner(object):
                 row_list.append(dict_stat_epoch)
                 logger.info("Saving Snapshot @ epoch {:04d}".format(epoch))
                 snapshot(model, optimizer, self.config, epoch + 1,
-                         scheduler=scheduler_rnn, graph_model="dgmg")
+                         scheduler=scheduler, graph_model="dgmg")
             epoch += 1
 
         stat_across_epochs = pd.DataFrame(row_list)
@@ -235,38 +237,81 @@ class DgmgRunner(object):
             graphs_gen = [nx.fast_gnp_random_graph(self.max_num_nodes, p_ER, seed=ii) for ii in
                           range(self.num_test_gen)]
         else:
-            ### load model
-            model = eval(self.model_conf.name)(self.config)
+            model = DGM_graphs(h_size=self.model_conf.node_embedding_size).cuda()
             model_file = os.path.join(self.config.save_dir, self.test_conf.test_model_name)
             load_model(model, model_file, self.device)
 
-            if self.use_gpu:
-                model = nn.DataParallel(model, device_ids=self.gpus).to(self.device)
-
             model.eval()
 
-            ### Generate Graphs
-            A_pred = []
-            num_nodes_pred = []
-            num_test_batch = int(np.ceil(self.num_test_gen / self.test_conf.batch_size))
+            graphs_generated = []
+            for i in range(self.test_conf.num_test_gen):
+                # NOTE: when starting loop, we assume a node has already been generated
+                node_neighbor = [[]]  # list of lists (first node is zero)
+                node_embedding = [
+                    Variable(torch.ones(1,self.model_conf.node_embedding_size)).cuda()]  # list of torch tensors, each size: 1*hidden
 
-            gen_run_time = []
-            for ii in tqdm(range(num_test_batch)):
-                with torch.no_grad():
-                    start_time = time.time()
-                    input_dict = {}
-                    input_dict['is_sampling'] = True
-                    input_dict['batch_size'] = self.test_conf.batch_size
-                    input_dict['num_nodes_pmf'] = self.num_nodes_pmf_train
-                    A_tmp = model(input_dict)
-                    gen_run_time += [time.time() - start_time]
-                    A_pred += [aa.data.cpu().numpy() for aa in A_tmp]
-                    num_nodes_pred += [aa.shape[0] for aa in A_tmp]
+                node_count = 1
+                while node_count <= self.max_num_nodes:
+                    # 1 message passing
+                    # do 2 times message passing
+                    node_embedding = message_passing(node_neighbor, node_embedding, model)
 
-            logger.info('Average test time per mini-batch = {}'.format(
-                np.mean(gen_run_time)))
+                    # 2 graph embedding and new node embedding
+                    node_embedding_cat = torch.cat(node_embedding, dim=0)
+                    graph_embedding = calc_graph_embedding(node_embedding_cat, model)
+                    init_embedding = calc_init_embedding(node_embedding_cat, model)
 
-            graphs_gen = [get_graph(aa) for aa in A_pred]
+                    # 3 f_addnode
+                    p_addnode = model.f_an(graph_embedding)
+                    a_addnode = sample_tensor(p_addnode)
+                    # print(a_addnode.data[0][0])
+                    if a_addnode.data[0][0] == 1:
+                        # print('add node')
+                        # add node
+                        node_neighbor.append([])
+                        node_embedding.append(init_embedding)
+                        if self.model_conf.is_fast:
+                            node_embedding_cat = torch.cat(node_embedding, dim=0)
+                    else:
+                        break
+
+                    edge_count = 0
+                    while edge_count < self.max_num_nodes:
+                        if not self.model_conf.is_fast:
+                            node_embedding = message_passing(node_neighbor, node_embedding, model)
+                            node_embedding_cat = torch.cat(node_embedding, dim=0)
+                            graph_embedding = calc_graph_embedding(node_embedding_cat, model)
+
+                        # 4 f_addedge
+                        p_addedge = model.f_ae(graph_embedding)
+                        a_addedge = sample_tensor(p_addedge)
+                        # print(a_addedge.data[0][0])
+
+                        if a_addedge.data[0][0] == 1:
+                            # print('add edge')
+                            # 5 f_nodes
+                            # excluding the last node (which is the new node)
+                            node_new_embedding_cat = node_embedding_cat[-1, :].expand(node_embedding_cat.size(0) - 1,
+                                                                                      node_embedding_cat.size(1))
+                            s_node = model.f_s(torch.cat((node_embedding_cat[0:-1, :], node_new_embedding_cat), dim=1))
+                            p_node = F.softmax(s_node.permute(1, 0))
+                            a_node = gumbel_softmax(p_node, temperature=0.01)
+                            _, a_node_id = a_node.topk(1)
+                            a_node_id = int(a_node_id.data[0][0])
+                            # add edge
+                            node_neighbor[-1].append(a_node_id)
+                            node_neighbor[a_node_id].append(len(node_neighbor) - 1)
+                        else:
+                            break
+
+                        edge_count += 1
+                    node_count += 1
+                # save graph
+                node_neighbor_dict = dict(zip(list(range(len(node_neighbor))), node_neighbor))
+                graph = nx.from_dict_of_lists(node_neighbor_dict)
+                graphs_generated.append(graph)
+
+            shuffle(graphs_generated)
 
         ### Visualize Generated Graphs
         if self.is_vis:
@@ -274,11 +319,11 @@ class DgmgRunner(object):
             num_row = int(np.ceil(self.num_vis / num_col))
             test_epoch = self.test_conf.test_model_name
             test_epoch = test_epoch[test_epoch.rfind('_') + 1:test_epoch.find('.pth')]
-            save_name = os.path.join(self.config.save_dir, '{}_gen_graphs_epoch_{}_block_{}_stride_{}.png'.format(
-                self.config.test.test_model_name[:-4], test_epoch, self.block_size, self.stride))
+            save_name = os.path.join(self.config.save_dir, '{}_gen_graphs_epoch_{}.png'.format(
+                self.config.test.test_model_name[:-4], test_epoch))
 
             # remove isolated nodes for better visulization
-            graphs_pred_vis = [copy.deepcopy(gg) for gg in graphs_gen[:self.num_vis]]
+            graphs_pred_vis = [copy.deepcopy(gg) for gg in graphs_generated[:self.num_vis]]
 
             if self.better_vis:
                 for gg in graphs_pred_vis:
@@ -320,31 +365,33 @@ class DgmgRunner(object):
             acc = eval_acc_lobster_graph(graphs_gen)
             logger.info('Validity accuracy of generated graphs = {}'.format(acc))
 
-        num_nodes_gen = [len(aa) for aa in graphs_gen]
+        num_nodes_gen = [aa.number_of_nodes() for aa in graphs_generated]
+
+        # Compared with Validation Set
+        num_nodes_dev = [gg.number_of_nodes() for gg in self.graphs_dev]  # shape B X 1
+        mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev = evaluate(self.graphs_dev, graphs_generated,
+                                                                                         degree_only=False)
+        mmd_num_nodes_dev = compute_mmd([np.bincount(num_nodes_dev)], [np.bincount(num_nodes_gen)], kernel=gaussian_emd)
 
         # Compared with Test Set
-        num_nodes_test = [len(gg.nodes) for gg in self.graphs]  # shape B X 1
-        mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs,
-                                                                                             graphs_gen,
+        num_nodes_test = [gg.number_of_nodes() for gg in self.graphs_test]  # shape B X 1
+        mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs_test,
+                                                                                             graphs_generated,
                                                                                              degree_only=False)
         mmd_num_nodes_test = compute_mmd([np.bincount(num_nodes_test)], [np.bincount(num_nodes_gen)],
                                          kernel=gaussian_emd)
+        logger.info(
+            "Validation MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
+                mmd_num_nodes_dev, mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev))
+        logger.info(
+            "Test MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
+                mmd_num_nodes_test, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test,
+                mmd_spectral_test))
 
-        results['mmd_num_nodes_test'] = mmd_num_nodes_test
-        results['mmd_degree_test'] = mmd_degree_test
-        results['mmd_clustering_test'] = mmd_clustering_test
-        results['mmd_4orbits_test'] = mmd_4orbits_test
-        results['mmd_spectral_test'] = mmd_spectral_test
-
-        logger.info("Test MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
-            mmd_num_nodes_test, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test))
-
-        pickle.dump(results, open(os.path.join(self.config.save_dir, 'evaluation_stats.p'), 'wb'))
-
-        if self.config.dataset.name in ['lobster']:
-            return mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test, acc
-        else:
-            return mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test
+        return {"mmd_degree_test": mmd_degree_test, "mmd_clustering_test": mmd_clustering_test,
+                "mmd_4orbits_test": mmd_4orbits_test, "mmd_spectral_test": mmd_spectral_test,
+                "mmd_degree_dev": mmd_degree_dev, "mmd_clustering_dev": mmd_clustering_dev,
+                "mmd_4orbits_dev": mmd_4orbits_dev, "mmd_spectral_dev": mmd_spectral_dev}
 
     def test_training(self, model, epoch_num):
 
@@ -355,7 +402,8 @@ class DgmgRunner(object):
             # NOTE: when starting loop, we assume a node has already been generated
             node_neighbor = [[]]  # list of lists (first node is zero)
             node_embedding = [
-                Variable(torch.ones(1, self.model_conf.node_embedding_size)).cuda()]  # list of torch tensors, each size: 1*hidden
+                Variable(torch.ones(1,
+                                    self.model_conf.node_embedding_size)).cuda()]  # list of torch tensors, each size: 1*hidden
 
             node_count = 1
             while node_count <= self.max_num_nodes:
@@ -419,19 +467,19 @@ class DgmgRunner(object):
             graphs_generated.append(graph)
 
         shuffle(graphs_generated)
-        graphs_gen = [get_graph(aa) for aa in graphs_generated]
-        num_nodes_gen = [len(aa) for aa in graphs_gen]
+        num_nodes_gen = [aa.number_of_nodes() for aa in graphs_generated]
 
         # Compared with Validation Set
-        num_nodes_dev = [len(gg.nodes) for gg in self.graphs_dev]  # shape B X 1
-        mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev = evaluate(self.graphs_dev, graphs_gen,
+        num_nodes_dev = [gg.number_of_nodes() for gg in self.graphs_dev]  # shape B X 1
+        mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev = evaluate(self.graphs_dev,
+                                                                                         graphs_generated,
                                                                                          degree_only=False)
         mmd_num_nodes_dev = compute_mmd([np.bincount(num_nodes_dev)], [np.bincount(num_nodes_gen)], kernel=gaussian_emd)
 
         # Compared with Test Set
-        num_nodes_test = [len(gg.nodes) for gg in self.graphs_test]  # shape B X 1
+        num_nodes_test = [gg.number_of_nodes() for gg in self.graphs_test]  # shape B X 1
         mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs_test,
-                                                                                             graphs_gen,
+                                                                                             graphs_generated,
                                                                                              degree_only=False)
         mmd_num_nodes_test = compute_mmd([np.bincount(num_nodes_test)], [np.bincount(num_nodes_gen)],
                                          kernel=gaussian_emd)
@@ -447,4 +495,3 @@ class DgmgRunner(object):
                 "mmd_4orbits_test": mmd_4orbits_test, "mmd_spectral_test": mmd_spectral_test,
                 "mmd_degree_dev": mmd_degree_dev, "mmd_clustering_dev": mmd_clustering_dev,
                 "mmd_4orbits_dev": mmd_4orbits_dev, "mmd_spectral_dev": mmd_spectral_dev}
-

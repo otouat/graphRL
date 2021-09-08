@@ -416,29 +416,31 @@ class GranRunner(object):
 
         num_nodes_gen = [len(aa) for aa in graphs_gen]
 
+        # Compared with Validation Set
+        num_nodes_dev = [gg.number_of_nodes() for gg in self.graphs_dev]  # shape B X 1
+        mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev = evaluate(self.graphs_dev, graphs_gen,
+                                                                                         degree_only=False)
+        mmd_num_nodes_dev = compute_mmd([np.bincount(num_nodes_dev)], [np.bincount(num_nodes_gen)], kernel=gaussian_emd)
+
         # Compared with Test Set
-        num_nodes_test = [len(gg.nodes) for gg in self.graphs]  # shape B X 1
-        mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs,
+        num_nodes_test = [gg.number_of_nodes() for gg in self.graphs_test]  # shape B X 1
+        mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs_test,
                                                                                              graphs_gen,
                                                                                              degree_only=False)
         mmd_num_nodes_test = compute_mmd([np.bincount(num_nodes_test)], [np.bincount(num_nodes_gen)],
                                          kernel=gaussian_emd)
+        logger.info(
+            "Validation MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
+                mmd_num_nodes_dev, mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev))
+        logger.info(
+            "Test MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
+                mmd_num_nodes_test, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test,
+                mmd_spectral_test))
 
-        results['mmd_num_nodes_test'] = mmd_num_nodes_test
-        results['mmd_degree_test'] = mmd_degree_test
-        results['mmd_clustering_test'] = mmd_clustering_test
-        results['mmd_4orbits_test'] = mmd_4orbits_test
-        results['mmd_spectral_test'] = mmd_spectral_test
-
-        logger.info("Test MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
-            mmd_num_nodes_test, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test))
-
-        pickle.dump(results, open(os.path.join(self.config.save_dir, 'evaluation_stats.p'), 'wb'))
-
-        if self.config.dataset.name in ['lobster']:
-            return mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test, acc
-        else:
-            return mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test
+        return {"mmd_degree_test": mmd_degree_test, "mmd_clustering_test": mmd_clustering_test,
+                "mmd_4orbits_test": mmd_4orbits_test, "mmd_spectral_test": mmd_spectral_test,
+                "mmd_degree_dev": mmd_degree_dev, "mmd_clustering_dev": mmd_clustering_dev,
+                "mmd_4orbits_dev": mmd_4orbits_dev, "mmd_spectral_dev": mmd_spectral_dev}
         
     def test_training(self, model ,epoch_num):
 
@@ -468,7 +470,7 @@ class GranRunner(object):
         shuffle(A_pred)
         graphs_gen = [get_graph(aa) for aa in A_pred]
 
-        num_nodes_gen = [len(aa) for aa in graphs_gen]
+        num_nodes_gen = [gg.number_of_nodes()  for aa in graphs_gen]
 
         # Compared with Validation Set
         num_nodes_dev = [gg.number_of_nodes() for gg in self.graphs_dev]  # shape B X 1
