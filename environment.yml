@@ -10,7 +10,7 @@ dependencies:
   - jupyter
   - jupyterlab
   - pytorch=1.8.1
-  - cudatoolkit=11.1
+  - cudatoolkit
   - networkx=2.3
   - scipy
   - tensorboardx
