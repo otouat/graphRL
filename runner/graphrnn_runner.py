@@ -114,7 +114,7 @@ class GraphRnnRunner(object):
         self.test_conf = config.test
         self.use_gpu = config.use_gpu
         self.gpus = config.gpus
-        self.device = config.device
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.writer = SummaryWriter(config.save_dir)
         self.is_vis = config.test.is_vis
         self.better_vis = config.test.better_vis
