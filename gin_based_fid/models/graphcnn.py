@@ -354,6 +354,6 @@ class GraphCNN(nn.Module):
             graph_embed = torch.Tensor([])
             for layer, h in enumerate(hidden_rep):
                 pooled_h = torch.spmm(graph_pool, h)
-                graph_embed = torch.cat([graph_embed, pooled_h], dim=1)
+                graph_embed = torch.cat([graph_embed.to(self.device), pooled_h.to(self.device)], dim=1)
 
             return graph_embed
