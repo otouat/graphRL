@@ -470,7 +470,7 @@ class GranRunner(object):
         shuffle(A_pred)
         graphs_gen = [get_graph(aa) for aa in A_pred]
 
-        num_nodes_gen = [gg.number_of_nodes()  for aa in graphs_gen]
+        num_nodes_gen = [gg.number_of_nodes()  for gg in graphs_gen]
 
         # Compared with Validation Set
         num_nodes_dev = [gg.number_of_nodes() for gg in self.graphs_dev]  # shape B X 1

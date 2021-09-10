@@ -193,7 +193,7 @@ class GraphRnnRunner(object):
             [1.0 / len(dataset) for i in range(len(dataset))],
             num_samples=self.model_conf.batch_size * self.model_conf.batch_ratio,
             replacement=True)
-
+        self.model_conf.max_prev_node = max_prev_node
         train_loader = torch.utils.data.DataLoader(
             dataset,
             batch_size=self.model_conf.batch_size,
