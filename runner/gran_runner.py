@@ -296,7 +296,12 @@ class GranRunner(object):
 
             # snapshot model
             if (epoch + 1) % self.train_conf.snapshot_epoch == 0:
-                dict_stat_epoch = self.test_training(model.module,epoch +1)
+                logger.info("Saving Snapshot @ epoch {:04d}".format(epoch + 1))
+                snapshot(model.module if self.use_gpu else model, optimizer, self.config, epoch + 1,
+                         scheduler=lr_scheduler)
+            # eval model
+            if (epoch+1)% self.train_conf.valid_epoch == 0:
+                dict_stat_epoch = self.test_training(model.module, epoch + 1)
                 self.writer.add_scalar('mmd_degree_test', dict_stat_epoch["mmd_degree_test"], iter_count)
                 self.writer.add_scalar('mmd_clustering_test', dict_stat_epoch["mmd_clustering_test"], iter_count)
                 self.writer.add_scalar('mmd_4orbits_test', dict_stat_epoch["mmd_4orbits_test"], iter_count)
@@ -306,9 +311,6 @@ class GranRunner(object):
                 self.writer.add_scalar('mmd_4orbits_dev', dict_stat_epoch["mmd_4orbits_dev"], iter_count)
                 self.writer.add_scalar('mmd_spectral_dev', dict_stat_epoch["mmd_spectral_dev"], iter_count)
                 row_list.append(dict_stat_epoch)
-                logger.info("Saving Snapshot @ epoch {:04d}".format(epoch + 1))
-                snapshot(model.module if self.use_gpu else model, optimizer, self.config, epoch + 1,
-                         scheduler=lr_scheduler)
         stat_across_epochs = pd.DataFrame(row_list)
         stat_across_epochs.to_csv(open(os.path.join(self.config.save_dir, "stat_across_epochs.csv"),'wb'),index=False,header=True)
         save_training_runs(time.strftime('%Y-%b-%d-%H-%M-%S'), self.dataset_conf.name, self.num_graphs,
