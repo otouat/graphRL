@@ -243,30 +243,33 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
     elif graph_type == 'community2':
         c_sizes = np.random.choice(list(range(18, 25)), 2)
         # c_sizes = [15] * 2
-        for k in range(100):
+        for k in range(500):
+            c_sizes = np.random.choice(list(range(30, 60)), 2)
             graphs.append(n_community(c_sizes, p_inter=0.05))
     elif graph_type == 'community4':
         c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 4)
         # c_sizes = [15] * 4
         for k in range(500):
+            c_sizes = np.random.choice(list(range(30, 60)), 4)
             graphs.append(n_community(c_sizes, p_inter=0.05))
     elif graph_type == 'community8':
         c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 8)
         # c_sizes = [15] * 4
         for k in range(500):
+            c_sizes = np.random.choice(list(range(30, 60)), 8)
             graphs.append(n_community(c_sizes, p_inter=0.01))
     elif graph_type == 'watts':
         for i in range(100, 200):
             for j in range(5):
-                graphs.append(nx.watts_strogatz_graph(i, 2, 0.05))
+                graphs.append(nx.watts_strogatz_graph(i, 4, 0.05))
     elif graph_type == 'wattsSW':
         for i in range(100, 200):
             for j in range(5):
-                graphs.append(nx.watts_strogatz_graph(i, 2, 0.1))
+                graphs.append(nx.watts_strogatz_graph(i, 4, 0.1))
     elif graph_type == 'watts_ring':
         for i in range(100, 200):
             for j in range(5):
-                graphs.append(nx.watts_strogatz_graph(i, 2, 0.0))
+                graphs.append(nx.watts_strogatz_graph(i, 4, 0.0))
     elif graph_type == 'watts_ring_big':
         for i in range(2000, 2010):
             for j in range(5):
