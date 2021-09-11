@@ -99,9 +99,9 @@ class Graph_to_sequence_dfs(torch.utils.data.Dataset):
         return len(self.adj_all)
     def __getitem__(self, idx):
         adj_copy = self.adj_all[idx].copy()
-        x_batch = np.zeros((self.n, self.max_prev_node))  # here zeros are padded for small graph
+        x_batch = np.zeros((self.n, self.n-1))  # here zeros are padded for small graph
         x_batch[0,:] = 1 # the first input token is all ones
-        y_batch = np.zeros((self.n, self.max_prev_node))  # here zeros are padded for small graph
+        y_batch = np.zeros((self.n, self.n-1))  # here zeros are padded for small graph
         # generate input x, y pairs
         len_batch = adj_copy.shape[0]
         x_idx = np.random.permutation(adj_copy.shape[0])
@@ -113,7 +113,7 @@ class Graph_to_sequence_dfs(torch.utils.data.Dataset):
         start_idx = np.random.randint(adj_copy.shape[0])
         x_idx = np.array(order_seq(G, start_idx, "dfs"))
         adj_copy = adj_copy[np.ix_(x_idx, x_idx)]
-        adj_encoded = encode_adj(adj_copy.copy(), max_prev_node=self.max_prev_node,is_full=True)
+        adj_encoded = encode_adj(adj_copy.copy(), max_prev_node=self.n-1)
         # get x and y and adj
         # for small graph the rest are zero padded
         y_batch[0:adj_encoded.shape[0], :] = adj_encoded
