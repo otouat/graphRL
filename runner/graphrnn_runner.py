@@ -187,8 +187,14 @@ class GraphRnnRunner(object):
                                         max_num_node=self.max_num_nodes)
             max_prev_node = dataset.max_prev_node
         elif self.dataset_conf.node_order == "DFS":
-            dataset = Graph_sequence_sampler_pytorch_dfs(self.graphs_train, max_prev_node,
+            max_prev_node = self.max_num_nodes -1
+            dataset = Graph_to_sequence_dfs(self.graphs_train, max_prev_node,
                                                          max_num_node=self.max_num_nodes)
+        elif self.dataset_conf.node_order == "nobfs":
+            dataset = Graph_to_sequence_dfs(self.graphs_train, max_prev_node,
+                                                         max_num_node=self.max_num_nodes)
+            max_prev_node = self.max_num_nodes -1
+
         sample_strategy = torch.utils.data.sampler.WeightedRandomSampler(
             [1.0 / len(dataset) for i in range(len(dataset))],
             num_samples=self.model_conf.batch_size * self.model_conf.batch_ratio,
@@ -236,18 +242,7 @@ class GraphRnnRunner(object):
         scheduler_output = optim.lr_scheduler.MultiStepLR(optimizer_output, self.train_conf.lr_decay_epoch,
                                                           gamma=self.train_conf.lr_decay)
 
-        # resume training
         resume_epoch = 0
-        # if self.train_conf.is_resume:
-        #     model_file = os.path.join(self.train_conf.resume_dir,
-        #                               self.train_conf.resume_model)
-        #     load_model(
-        #         model.module if self.use_gpu else model,
-        #         model_file,
-        #         self.device,
-        #         optimizer=optimizer,
-        #         scheduler=lr_scheduler)
-        #     resume_epoch = self.train_conf.resume_epoch
 
         # Training Loop
         row_list = []
