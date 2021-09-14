@@ -241,22 +241,16 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
                 for k in range(5):
                     graphs.append(nx.barabasi_albert_graph(i, j))
     elif graph_type == 'community2':
-        c_sizes = np.random.choice(list(range(18, 25)), 2)
-        # c_sizes = [15] * 2
+        c_sizes = np.random.choice(list(range(30, 80)), 2)
         for k in range(500):
-            c_sizes = np.random.choice(list(range(10, 25)), 2)
             graphs.append(n_community(c_sizes, p_inter=0.05))
     elif graph_type == 'community4':
-        c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 4)
-        # c_sizes = [15] * 4
+        c_sizes = np.random.choice(list(range(30, 80)), 4)
         for k in range(500):
-            c_sizes = np.random.choice(list(range(10, 25)), 2)
             graphs.append(n_community(c_sizes, p_inter=0.05))
     elif graph_type == 'community8':
-        c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 8)
-        # c_sizes = [15] * 4
+        c_sizes = np.random.choice(list(range(30, 80)), 8)
         for k in range(500):
-            c_sizes = np.random.choice(list(range(10, 25)), 2)
             graphs.append(n_community(c_sizes, p_inter=0.01))
     elif graph_type == 'watts':
         for i in range(100, 200):
