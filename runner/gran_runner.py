@@ -411,38 +411,26 @@ class GranRunner(object):
                     layout='spring')
 
         ### Evaluation
-        results = defaultdict(float)
         if self.config.dataset.name in ['lobster']:
             acc = eval_acc_lobster_graph(graphs_gen)
             logger.info('Validity accuracy of generated graphs = {}'.format(acc))
 
         num_nodes_gen = [len(aa) for aa in graphs_gen]
 
-        # Compared with Validation Set
-        num_nodes_dev = [gg.number_of_nodes() for gg in self.graphs_dev]  # shape B X 1
-        mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev = evaluate(self.graphs_dev, graphs_gen,
-                                                                                         degree_only=False)
-        mmd_num_nodes_dev = compute_mmd([np.bincount(num_nodes_dev)], [np.bincount(num_nodes_gen)], kernel=gaussian_emd)
-
         # Compared with Test Set
         num_nodes_test = [gg.number_of_nodes() for gg in self.graphs_test]  # shape B X 1
-        mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs_test,
+        mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs,
                                                                                              graphs_gen,
                                                                                              degree_only=False)
         mmd_num_nodes_test = compute_mmd([np.bincount(num_nodes_test)], [np.bincount(num_nodes_gen)],
                                          kernel=gaussian_emd)
-        logger.info(
-            "Validation MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
-                mmd_num_nodes_dev, mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev))
         logger.info(
             "Test MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
                 mmd_num_nodes_test, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test,
                 mmd_spectral_test))
 
         return {"mmd_degree_test": mmd_degree_test, "mmd_clustering_test": mmd_clustering_test,
-                "mmd_4orbits_test": mmd_4orbits_test, "mmd_spectral_test": mmd_spectral_test,
-                "mmd_degree_dev": mmd_degree_dev, "mmd_clustering_dev": mmd_clustering_dev,
-                "mmd_4orbits_dev": mmd_4orbits_dev, "mmd_spectral_dev": mmd_spectral_dev}
+                "mmd_4orbits_test": mmd_4orbits_test, "mmd_spectral_test": mmd_spectral_test}
         
     def test_training(self, model ,epoch_num):
 
