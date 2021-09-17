@@ -26,14 +26,12 @@ def get_stats_from_trained_model(config_param, seed):
     torch.cuda.manual_seed_all(seed)
     config_param.use_gpu = config_param.use_gpu and torch.cuda.is_available()
     torch.cuda.empty_cache()
+    config_param.test.is_vis=False
 
     runner = eval(config_param.runner)(config_param)
 
-    mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = runner.test()
-    return {"mmd_degree_test": mmd_degree_test, "mmd_clustering_test": mmd_clustering_test,
-            "mmd_4orbits_test": mmd_4orbits_test, "mmd_spectral_test": mmd_spectral_test,
-            "mmd_degree_dev": mmd_degree_dev, "mmd_clustering_dev": mmd_clustering_dev,
-            "mmd_4orbits_dev": mmd_4orbits_dev, "mmd_spectral_dev": mmd_spectral_dev}
+    dict_stat_epoch = runner.test()
+    return dict_stat_epoch
 
 
 # %%
@@ -49,12 +47,14 @@ for training_path in df['file_dir']:
 
     for i in range(10):
         if training_path.find('mlp') == -1:
-            dict_results = {"dataset_name": config.dataset.name, "model_name": config.model.name,
+            dict_results = {"dataset_name": config.dataset.name, "model_name": config.model.name, "node_order":config.dataset.node_order,
                             "num_epochs": config.train.max_epoch}
         else:
             dict_results = {"dataset_name": config.dataset.name, "model_name": config.model.name + "_MLP",
                             "num_epochs": config.train.max_epoch}
+
         dict_stats = get_stats_from_trained_model(config, 11 * (i ^ 3))
+        print(dict_stats)
         dict_results.update(dict_stats)
         row_list.append(dict_results)
         torch.cuda.empty_cache()
@@ -62,5 +62,5 @@ for training_path in df['file_dir']:
 result_df = pd.DataFrame(row_list)
 torch.cuda.empty_cache()
 
-result_df.to_csv("statsResults.csv")
-result_df.groupby(['dataset_name', 'model_name', 'num_epochs']).agg(['mean', 'std']).to_csv("statssResults.csv")
+result_df.to_csv("CompOrderComm2Gran.csv")
+result_df.groupby(['dataset_name', 'model_name', 'num_epochs']).agg(['mean', 'std']).to_csv("statsCom2GranResults.csv")

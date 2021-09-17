@@ -14,6 +14,8 @@ import concurrent.futures
 import tempfile
 from random import shuffle
 from datetime import datetime
+
+import powerlaw
 from scipy.linalg import eigvalsh
 from utils.dist_helper import compute_mmd, gaussian_emd, gaussian, emd, gaussian_tv
 
@@ -284,7 +286,7 @@ def orca(graph):
     f.close()
 
     output = sp.check_output(
-        ['./utils/orca/orca', 'node', '4', 'utils/orca/tmp.txt', 'std'])
+        ['./utils/orca/orca.exe', 'node', '4', 'utils/orca/tmp.txt', 'std'])
     output = output.decode('utf8').strip()
     idx = output.find(COUNT_START_STR) + len(COUNT_START_STR) + 2
     output = output[idx:]
@@ -451,6 +453,23 @@ def is_lobster_graph(G):
     else:
         return False
 
+
+###############################################################################
+
+def powerlaw_mean(graphs_pred, graphs_test):
+    mean_fit_pred = np.mean(
+        [powerlaw.Fit(sorted([d for n, d in graph.degree()], reverse=True)).alpha for graph in graphs_pred])
+    mean_fit_test = np.mean(
+        [powerlaw.Fit(sorted([d for n, d in graph.degree()], reverse=True)).alpha for graph in graphs_test])
+    return mean_fit_pred, mean_fit_test
+
+
+def average_shortest_path_length(graphs_pred,graphs_test):
+    avg_path_length_pred = np.mean([nx.average_shortest_path_length(g) for g in graphs_pred])
+    avg_path_length_test = np.mean([nx.average_shortest_path_length(g) for g in graphs_test])
+    return avg_path_length_pred,avg_path_length_test
+
+###############################################################################
 
 def write_graphs_from_dir(graphs_path, graphs_indices, outfile):
     """
