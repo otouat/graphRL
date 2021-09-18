@@ -408,15 +408,13 @@ class GraphRnnRunner(object):
         mmd_num_nodes_test = compute_mmd([np.bincount(num_nodes_test)], [np.bincount(num_nodes_gen)],
                                          kernel=gaussian_emd)
 
-        logger.info("Test MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
-            mmd_num_nodes_test, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test))
+        logger.info(
+            "Test MMD scores of #nodes/degree/clustering/4orbits/spectral are = {}/{}/{}/{}/{}".format(
+                mmd_num_nodes_test, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test,
+                mmd_spectral_test))
 
-        pickle.dump(results, open(os.path.join(self.config.save_dir, 'evaluation_stats.p'), 'wb'))
-
-        if self.config.dataset.name in ['lobster']:
-            return mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test, acc
-        else:
-            return mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test
+        return {"mmd_degree_test": mmd_degree_test, "mmd_clustering_test": mmd_clustering_test,
+                "mmd_4orbits_test": mmd_4orbits_test, "mmd_spectral_test": mmd_spectral_test}
 
     def test_training(self, rnn, output, epoch_num):
 

@@ -240,14 +240,22 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
             for j in range(4, 5):
                 for k in range(5):
                     graphs.append(nx.barabasi_albert_graph(i, j))
+    elif graph_type == 'community2small':
+        c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 2)
+        for k in range(500):
+            graphs.append(n_community(c_sizes, p_inter=0.01))
+    elif graph_type == 'community4small':
+        c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 4)
+        for k in range(500):
+            graphs.append(n_community(c_sizes, p_inter=0.01))
     elif graph_type == 'community2':
-        for k in range(500):
-            c_sizes = np.random.choice(list(range(30, 80)), 2)
-            graphs.append(n_community(c_sizes, p_inter=0.05))
+        c_sizes = np.random.choice(list(range(30, 80)), 2)
+        for k in range(100):
+            graphs.append(n_community(c_sizes, p_inter=0.01))
     elif graph_type == 'community4':
+        c_sizes = np.random.choice(list(range(30, 80)), 4)
         for k in range(500):
-            c_sizes = np.random.choice(list(range(30, 80)), 4)
-            graphs.append(n_community(c_sizes, p_inter=0.05))
+            graphs.append(n_community(c_sizes, p_inter=0.01))
     elif graph_type == 'community8':
         for k in range(500):
             c_sizes = np.random.choice(list(range(30, 80)), 8)
