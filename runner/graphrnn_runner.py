@@ -462,3 +462,63 @@ class GraphRnnRunner(object):
                 "mmd_4orbits_test": mmd_4orbits_test, "mmd_spectral_test": mmd_spectral_test,
                 "mmd_degree_dev": mmd_degree_dev, "mmd_clustering_dev": mmd_clustering_dev,
                 "mmd_4orbits_dev": mmd_4orbits_dev, "mmd_spectral_dev": mmd_spectral_dev}
+
+    def generate_graphs(self):
+        self.config.save_dir = self.test_conf.test_model_dir
+
+        ### Compute Erdos-Renyi baseline
+        if self.config.test.is_test_ER:
+            p_ER = sum([aa.number_of_edges() for aa in self.graphs_train]) / sum(
+                [aa.number_of_nodes() ** 2 for aa in self.graphs_train])
+            graphs_gen = [nx.fast_gnp_random_graph(self.max_num_nodes, p_ER, seed=ii) for ii in
+                          range(self.num_test_gen)]
+        else:
+            ### load model
+            # create models
+            if self.model_conf.is_mlp:
+                rnn = RNN(input_size=int(self.model_conf.max_prev_node),
+                          embedding_size=int(self.model_conf.embedding_size_rnn),
+                          hidden_size=int(self.model_conf.hidden_size_rnn), num_layers=int(self.model_conf.num_layers),
+                          has_input=True,
+                          has_output=False).cuda()
+
+                output = MLP_plain(h_size=int(self.model_conf.hidden_size_rnn),
+                                   embedding_size=int(self.model_conf.embedding_size_output),
+                                   y_size=int(self.model_conf.max_prev_node)).cuda()
+            else:
+                rnn = RNN(input_size=int(self.model_conf.max_prev_node),
+                          embedding_size=int(self.model_conf.embedding_size_rnn),
+                          hidden_size=int(self.model_conf.hidden_size_rnn), num_layers=int(self.model_conf.num_layers),
+                          has_input=True,
+                          has_output=True, output_size=int(self.model_conf.hidden_size_rnn_output)).cuda()
+
+                output = RNN(input_size=1, embedding_size=int(self.model_conf.embedding_size_rnn_output),
+                             hidden_size=int(self.model_conf.hidden_size_rnn_output),
+                             num_layers=int(self.model_conf.num_layers),
+                             has_input=True,
+                             has_output=True, output_size=1).cuda()
+
+            # create optimizer
+            rnn_file = os.path.join(self.config.save_dir, self.test_conf.test_rnn_name)
+            output_file = os.path.join(self.config.save_dir, self.test_conf.test_output_name)
+            load_model(rnn, rnn_file, self.device)
+            load_model(output, output_file, self.device)
+
+            rnn.eval()
+            output.eval()
+            num_test_batch = int(np.ceil(len(self.graphs_dev)  / self.test_conf.batch_size))
+            G_pred = []
+            for i in tqdm(range(num_test_batch)):
+                with torch.no_grad():
+                    if self.model_conf.is_mlp:
+                        graphs_gen = test_mlp_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
+                                                           test_batch_size=self.test_conf.batch_size)
+                        G_pred.extend(graphs_gen)
+                    else:
+                        graphs_gen = test_rnn_epoch_runner(self.train_conf.max_epoch, self.model_conf, rnn, output,
+                                                           test_batch_size=self.test_conf.batch_size)
+                        G_pred.extend(graphs_gen)
+
+            shuffle(G_pred)
+
+        return G_pred

@@ -344,7 +344,7 @@ class GranRunner(object):
             ### Generate Graphs
             A_pred = []
             num_nodes_pred = []
-            num_test_batch = int(np.ceil(self.num_test_gen / self.test_conf.batch_size))
+            num_test_batch = int(np.ceil(len(self.graphs) / self.test_conf.batch_size))
 
             gen_run_time = []
             for ii in tqdm(range(num_test_batch)):
@@ -488,3 +488,47 @@ class GranRunner(object):
                 "mmd_degree_dev": mmd_degree_dev, "mmd_clustering_dev": mmd_clustering_dev,
                 "mmd_4orbits_dev": mmd_4orbits_dev, "mmd_spectral_dev": mmd_spectral_dev}
 
+    def generate_graphs(self):
+        self.config.save_dir = self.test_conf.test_model_dir
+
+        ### Compute Erdos-Renyi baseline
+        if self.config.test.is_test_ER:
+            p_ER = sum([aa.number_of_edges() for aa in self.graphs_train]) / sum(
+                [aa.number_of_nodes() ** 2 for aa in self.graphs_train])
+            graphs_gen = [nx.fast_gnp_random_graph(self.max_num_nodes, p_ER, seed=ii) for ii in
+                          range(self.num_test_gen)]
+        else:
+            ### load model
+            model = eval(self.model_conf.name)(self.config)
+            model_file = os.path.join(self.config.save_dir, self.test_conf.test_model_name)
+            load_model(model, model_file, self.device)
+
+            if self.use_gpu:
+                model = nn.DataParallel(model, device_ids=self.gpus).to(self.device)
+
+            model.eval()
+
+            ### Generate Graphs
+            A_pred = []
+            num_nodes_pred = []
+            num_test_batch = int(np.ceil(self.num_test_gen / self.test_conf.batch_size))
+
+            gen_run_time = []
+            for ii in tqdm(range(num_test_batch)):
+                with torch.no_grad():
+                    start_time = time.time()
+                    input_dict = {}
+                    input_dict['is_sampling'] = True
+                    input_dict['batch_size'] = self.test_conf.batch_size
+                    input_dict['num_nodes_pmf'] = self.num_nodes_pmf_train
+                    A_tmp = model(input_dict)
+                    gen_run_time += [time.time() - start_time]
+                    A_pred += [aa.data.cpu().numpy() for aa in A_tmp]
+                    num_nodes_pred += [aa.shape[0] for aa in A_tmp]
+
+            logger.info('Average test time per mini-batch = {}'.format(
+                np.mean(gen_run_time)))
+
+            graphs_gen = [get_graph(aa) for aa in A_pred]
+
+        return graphs_gen

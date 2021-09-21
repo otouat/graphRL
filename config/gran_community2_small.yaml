@@ -1,6 +1,6 @@
 ---
 exp_name: GRAN
-exp_dir: exp/GRAN/community2
+exp_dir: exp/GRAN/community2small
 runner: GranRunner
 use_horovod: false
 use_gpu: true
@@ -9,7 +9,7 @@ gpus: [0]
 seed: 1234
 dataset:
   loader_name: GRANData
-  name: community2
+  name: community2small
   data_path: data
   node_order: DFS # k_core/BFS/degree_decent
   train_ratio: 0.8
@@ -40,10 +40,10 @@ train:
   lr_decay: 0.3
   lr_decay_epoch: [100000000] # no decay
   num_workers: 0
-  max_epoch: 3000
+  max_epoch: 50
   batch_size: 1
   display_iter: 10
-  snapshot_epoch: 3000
+  snapshot_epoch: 5
   valid_epoch: 1
   lr: 1.0e-4
   wd: 0.0e-4
