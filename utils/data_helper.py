@@ -250,7 +250,7 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
             graphs.append(n_community(c_sizes, p_inter=0.01))
     elif graph_type == 'community2':
         c_sizes = np.random.choice(list(range(30, 80)), 2)
-        for k in range(100):
+        for k in range(500):
             graphs.append(n_community(c_sizes, p_inter=0.01))
     elif graph_type == 'community4':
         c_sizes = np.random.choice(list(range(30, 80)), 4)
