@@ -157,8 +157,8 @@ def graph_load_batch(data_dir,
     return graphs
 
 
-def n_community(c_sizes, p_inter=0.01):
-    graphs = [nx.gnp_random_graph(c_sizes[i], 0.7, seed=i) for i in range(len(c_sizes))]
+def n_community(c_sizes, p_inter=0.01, p_in = 0.7):
+    graphs = [nx.gnp_random_graph(c_sizes[i], p_in, seed=i) for i in range(len(c_sizes))]
     G = nx.disjoint_union_all(graphs)
     communities = list(nx.connected_component_subgraphs(G))
     for i in range(len(communities)):
@@ -241,20 +241,20 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
                 for k in range(5):
                     graphs.append(nx.barabasi_albert_graph(i, j))
     elif graph_type == 'community2small':
-        c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 2)
         for k in range(500):
-            graphs.append(n_community(c_sizes, p_inter=0.01))
+            c_sizes = np.random.choice([6,7,8,9,10], 2)
+            graphs.append(n_community(c_sizes, p_inter=0.05,p_in=0.3))
     elif graph_type == 'community4small':
         c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 4)
         for k in range(500):
             graphs.append(n_community(c_sizes, p_inter=0.01))
     elif graph_type == 'community2':
-        c_sizes = np.random.choice(list(range(30, 80)), 2)
         for k in range(500):
-            graphs.append(n_community(c_sizes, p_inter=0.01))
+            c_sizes = np.random.choice(list(range(30, 80)), 2)
+            graphs.append(n_community(c_sizes, p_inter=0.05, p_in=0.3))
     elif graph_type == 'community4':
-        c_sizes = np.random.choice(list(range(30, 80)), 4)
         for k in range(500):
+            c_sizes = np.random.choice(list(range(30, 80)), 4)
             graphs.append(n_community(c_sizes, p_inter=0.01))
     elif graph_type == 'community8':
         for k in range(500):

@@ -1,4 +1,5 @@
 """Copyright (c) 2019 Conan"""
+import random
 
 import torch
 import time
@@ -58,8 +59,10 @@ class GRANData(object):
 
   def _get_graph_data(self, G):
     node_degree_list = [(n, d) for n, d in G.degree()]
-
+    node_mapping = dict(zip(G.nodes(), sorted(G.nodes(), key=lambda k: random.random())))
+    g_uniform = nx.relabel_nodes(G, node_mapping)
     adj_0 = np.array(nx.to_numpy_matrix(G))
+    adj_6 = np.array(nx.to_numpy_matrix(g_uniform))
 
     ### Degree descent ranking
     # N.B.: largest-degree node may not be unique
@@ -126,6 +129,8 @@ class GRANData(object):
         adj_list = [adj_4]
       elif self.node_order == 'k_core':
         adj_list = [adj_5]
+      elif self.node_order == 'uniform_random':
+        adj_list = [adj_6]
       elif self.node_order == 'DFS+BFS':
         adj_list = [adj_4, adj_3]
       elif self.node_order == 'DFS+BFS+k_core':

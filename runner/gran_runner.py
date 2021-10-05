@@ -531,4 +531,11 @@ class GranRunner(object):
 
             graphs_gen = [get_graph(aa) for aa in A_pred]
 
+        base_path = os.path.join(self.config.dataset.data_path, 'generated_graphs')
+        if not os.path.exists(base_path):
+            os.makedirs(base_path)
+        save_graph_list(
+            graphs_gen,
+            os.path.join(base_path, '{}_{}_{}.p'.format(self.config.dataset.name, self.model_conf.name,
+                                                        self.dataset_conf.node_order)))
         return graphs_gen
