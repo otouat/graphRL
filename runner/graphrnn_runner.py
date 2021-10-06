@@ -103,6 +103,7 @@ def save_training_runs(date, dataset, dataset_num, model, epochs, file_dir):
 
     return 1
 
+
 class GraphRnnRunner(object):
 
     def __init__(self, config):
@@ -187,12 +188,12 @@ class GraphRnnRunner(object):
                                         max_num_node=self.max_num_nodes)
             max_prev_node = dataset.max_prev_node
         elif self.dataset_conf.node_order == "DFS":
-            max_prev_node = self.max_num_nodes -1
+            max_prev_node = self.max_num_nodes - 1
             dataset = Graph_to_sequence_dfs(self.graphs_train, max_prev_node,
-                                                         max_num_node=self.max_num_nodes)
+                                            max_num_node=self.max_num_nodes)
         elif self.dataset_conf.node_order == "nobfs":
-            dataset = Graph_to_sequence_nobfs(self.graphs_train,max_num_node=self.max_num_nodes)
-            max_prev_node = self.max_num_nodes -1
+            dataset = Graph_to_sequence_nobfs(self.graphs_train, max_num_node=self.max_num_nodes)
+            max_prev_node = self.max_num_nodes - 1
 
         sample_strategy = torch.utils.data.sampler.WeightedRandomSampler(
             [1.0 / len(dataset) for i in range(len(dataset))],
@@ -242,7 +243,24 @@ class GraphRnnRunner(object):
                                                           gamma=self.train_conf.lr_decay)
 
         resume_epoch = 0
-
+        if self.train_conf.is_resume:
+            rnn_file = os.path.join(self.train_conf.resume_dir,
+                                    self.train_conf.resume_rnn_name)
+            output_file = os.path.join(self.train_conf.resume_dir,
+                                       self.train_conf.resume_output_name)
+            load_model(
+                rnn,
+                rnn_file,
+                self.device,
+                optimizer=optimizer_rnn,
+                scheduler=scheduler_rnn)
+            load_model(
+                output,
+                output_file,
+                self.device,
+                optimizer=optimizer_output,
+                scheduler=scheduler_output)
+            resume_epoch = self.train_conf.resume_epoch
         # Training Loop
         row_list = []
         iter_count = 0
@@ -265,7 +283,7 @@ class GraphRnnRunner(object):
 
             # snapshot model
             if (epoch + 1) % self.train_conf.snapshot_epoch == 0:
-                dict_stat_epoch = self.test_training(rnn, output,epoch +1)
+                dict_stat_epoch = self.test_training(rnn, output, epoch + 1)
                 self.writer.add_scalar('mmd_degree_test', dict_stat_epoch["mmd_degree_test"], iter_count)
                 self.writer.add_scalar('mmd_clustering_test', dict_stat_epoch["mmd_clustering_test"], iter_count)
                 self.writer.add_scalar('mmd_4orbits_test', dict_stat_epoch["mmd_4orbits_test"], iter_count)
@@ -284,7 +302,8 @@ class GraphRnnRunner(object):
             torch.cuda.empty_cache()
         stat_across_epochs = pd.DataFrame(row_list)
 
-        stat_across_epochs.to_csv(os.path.join(self.config.save_dir, "stat_across_epochs.csv"),index=False,header=True)
+        stat_across_epochs.to_csv(os.path.join(self.config.save_dir, "stat_across_epochs.csv"), index=False,
+                                  header=True)
         save_training_runs(time.strftime('%Y-%b-%d-%H-%M-%S'), self.dataset_conf.name, self.num_graphs,
                            self.model_conf.name,
                            self.train_conf.max_epoch, self.config.save_dir)
@@ -335,7 +354,7 @@ class GraphRnnRunner(object):
 
             rnn.eval()
             output.eval()
-            num_test_batch = int(np.ceil(len(self.graphs_dev)  / self.test_conf.batch_size))
+            num_test_batch = int(np.ceil(len(self.graphs_dev) / self.test_conf.batch_size))
             G_pred = []
             for i in tqdm(range(num_test_batch)):
                 with torch.no_grad():
@@ -359,7 +378,7 @@ class GraphRnnRunner(object):
                 self.config.test.test_rnn_name[:-4], test_epoch))
 
             # remove isolated nodes for better visualization
-            graphs_pred_vis = [copy.deepcopy(gg) for gg in graphs_gen[:self.num_vis]]
+            graphs_pred_vis = [copy.deepcopy(gg) for gg in G_pred[:self.num_vis]]
 
             if self.better_vis:
                 for gg in graphs_pred_vis:
@@ -398,12 +417,12 @@ class GraphRnnRunner(object):
             acc = eval_acc_lobster_graph(graphs_gen)
             logger.info('Validity accuracy of generated graphs = {}'.format(acc))
 
-        num_nodes_gen = [len(aa) for aa in graphs_gen]
+        num_nodes_gen = [len(aa) for aa in G_pred]
 
         # Compared with Test Set
         num_nodes_test = [len(gg.nodes) for gg in self.graphs]  # shape B X 1
         mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs,
-                                                                                             graphs_gen,
+                                                                                             G_pred,
                                                                                              degree_only=False)
         mmd_num_nodes_test = compute_mmd([np.bincount(num_nodes_test)], [np.bincount(num_nodes_gen)],
                                          kernel=gaussian_emd)
@@ -439,14 +458,14 @@ class GraphRnnRunner(object):
 
         # Compared with Validation Set
         num_nodes_dev = [gg.number_of_nodes() for gg in self.graphs_dev]  # shape B X 1
-        mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev = evaluate(self.graphs_dev, graphs_gen,
+        mmd_degree_dev, mmd_clustering_dev, mmd_4orbits_dev, mmd_spectral_dev = evaluate(self.graphs_dev, G_pred,
                                                                                          degree_only=False)
         mmd_num_nodes_dev = compute_mmd([np.bincount(num_nodes_dev)], [np.bincount(num_nodes_gen)], kernel=gaussian_emd)
 
         # Compared with Test Set
         num_nodes_test = [gg.number_of_nodes() for gg in self.graphs_test]  # shape B X 1
         mmd_degree_test, mmd_clustering_test, mmd_4orbits_test, mmd_spectral_test = evaluate(self.graphs_test,
-                                                                                             graphs_gen,
+                                                                                             G_pred,
                                                                                              degree_only=False)
         mmd_num_nodes_test = compute_mmd([np.bincount(num_nodes_test)], [np.bincount(num_nodes_gen)],
                                          kernel=gaussian_emd)
@@ -458,7 +477,7 @@ class GraphRnnRunner(object):
                 epoch_num, mmd_num_nodes_test, mmd_degree_test, mmd_clustering_test, mmd_4orbits_test,
                 mmd_spectral_test))
 
-        return {"epoch_num":epoch_num,"mmd_degree_test": mmd_degree_test, "mmd_clustering_test": mmd_clustering_test,
+        return {"epoch_num": epoch_num, "mmd_degree_test": mmd_degree_test, "mmd_clustering_test": mmd_clustering_test,
                 "mmd_4orbits_test": mmd_4orbits_test, "mmd_spectral_test": mmd_spectral_test,
                 "mmd_degree_dev": mmd_degree_dev, "mmd_clustering_dev": mmd_clustering_dev,
                 "mmd_4orbits_dev": mmd_4orbits_dev, "mmd_spectral_dev": mmd_spectral_dev}
@@ -506,7 +525,7 @@ class GraphRnnRunner(object):
 
             rnn.eval()
             output.eval()
-            num_test_batch = int(np.ceil(len(self.graphs_dev)  / self.test_conf.batch_size))
+            num_test_batch = int(np.ceil(len(self.graphs_dev) / self.test_conf.batch_size))
             G_pred = []
             for i in tqdm(range(num_test_batch)):
                 with torch.no_grad():
@@ -520,5 +539,12 @@ class GraphRnnRunner(object):
                         G_pred.extend(graphs_gen)
 
             shuffle(G_pred)
+
+        base_path = os.path.join(self.config.dataset.data_path, 'generated_graphs')
+        if not os.path.exists(base_path):
+            os.makedirs(base_path)
+        save_graph_list(
+            G_pred,
+            os.path.join(base_path, '{}_{}_{}.p'.format(self.config.dataset.name,self.model_conf.name,self.dataset_conf.node_order)))
 
         return G_pred
