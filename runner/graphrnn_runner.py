@@ -543,8 +543,13 @@ class GraphRnnRunner(object):
         base_path = os.path.join(self.config.dataset.data_path, 'generated_graphs')
         if not os.path.exists(base_path):
             os.makedirs(base_path)
-        save_graph_list(
-            G_pred,
-            os.path.join(base_path, '{}_{}_{}.p'.format(self.config.dataset.name,self.model_conf.name,self.dataset_conf.node_order)))
-
+        if self.model_conf.is_mlp:
+            save_graph_list(
+                G_pred,
+                os.path.join(base_path, '{}_{}_{}.p'.format(self.config.dataset.name,self.model_conf.name+"_MLP",self.dataset_conf.node_order)))
+        else :
+            save_graph_list(
+                G_pred,
+                os.path.join(base_path, '{}_{}_{}.p'.format(self.config.dataset.name, self.model_conf.name,
+                                                            self.dataset_conf.node_order)))
         return G_pred
