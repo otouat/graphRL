@@ -511,7 +511,7 @@ class GranRunner(object):
             ### Generate Graphs
             A_pred = []
             num_nodes_pred = []
-            num_test_batch = int(np.ceil(self.num_test_gen / self.test_conf.batch_size))
+            num_test_batch = int(np.ceil(len(self.graphs) / self.test_conf.batch_size))
 
             gen_run_time = []
             for ii in tqdm(range(num_test_batch)):
