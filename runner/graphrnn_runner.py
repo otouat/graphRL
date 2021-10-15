@@ -194,7 +194,10 @@ class GraphRnnRunner(object):
         elif self.dataset_conf.node_order == "nobfs":
             dataset = Graph_to_sequence_nobfs(self.graphs_train, max_num_node=self.max_num_nodes)
             max_prev_node = self.max_num_nodes - 1
-
+        elif self.dataset_conf.node_order == "degree_descent":
+            max_prev_node = self.max_num_nodes - 1
+            dataset = Graph_to_sequence_dfs(self.graphs_train, max_prev_node,order=self.dataset_conf.node_order,
+                                            max_num_node=self.max_num_nodes)
         sample_strategy = torch.utils.data.sampler.WeightedRandomSampler(
             [1.0 / len(dataset) for i in range(len(dataset))],
             num_samples=self.model_conf.batch_size * self.model_conf.batch_ratio,
@@ -354,7 +357,7 @@ class GraphRnnRunner(object):
 
             rnn.eval()
             output.eval()
-            num_test_batch = int(np.ceil(len(self.graphs_dev) / self.test_conf.batch_size))
+            num_test_batch = int(np.ceil(len(self.graphs) / self.test_conf.batch_size))
             G_pred = []
             for i in tqdm(range(num_test_batch)):
                 with torch.no_grad():

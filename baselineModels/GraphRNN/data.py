@@ -6,6 +6,7 @@ import torch
 from torch.utils.data import Dataset
 import pickle
 
+
 class Graph_to_sequence(Dataset):
     """Graph Dataset"""
 
@@ -76,15 +77,16 @@ class Graph_to_sequence(Dataset):
             adj_copy = adj_copy[np.ix_(x_idx, x_idx)]
             # encode adj
             adj_encoded = encode_adj_flexible(adj_copy.copy())
-            if adj_encoded==[]:
+            if adj_encoded == []:
                 continue
             max_encoded_len = max([len(adj_encoded[i]) for i in range(len(adj_encoded))])
             max_prev_node.append(max_encoded_len)
         max_prev_node = sorted(max_prev_node)[-1 * topk:]
         return max_prev_node
 
+
 class Graph_to_sequence_dfs(torch.utils.data.Dataset):
-    def __init__(self, G_list,max_prev_node, max_num_node=None):
+    def __init__(self, G_list, max_prev_node, order='dfs', max_num_node=None):
         self.adj_all = []
         self.len_all = []
         for G in G_list:
@@ -94,14 +96,17 @@ class Graph_to_sequence_dfs(torch.utils.data.Dataset):
             self.n = max(self.len_all)
         else:
             self.n = max_num_node
-        self.max_prev_node=max_prev_node
+        self.max_prev_node = max_prev_node
+        self.order = order
+
     def __len__(self):
         return len(self.adj_all)
+
     def __getitem__(self, idx):
         adj_copy = self.adj_all[idx].copy()
-        x_batch = np.zeros((self.n, self.n-1))  # here zeros are padded for small graph
-        x_batch[0,:] = 1 # the first input token is all ones
-        y_batch = np.zeros((self.n, self.n-1))  # here zeros are padded for small graph
+        x_batch = np.zeros((self.n, self.n - 1))  # here zeros are padded for small graph
+        x_batch[0, :] = 1  # the first input token is all ones
+        y_batch = np.zeros((self.n, self.n - 1))  # here zeros are padded for small graph
         # generate input x, y pairs
         len_batch = adj_copy.shape[0]
         x_idx = np.random.permutation(adj_copy.shape[0])
@@ -111,14 +116,15 @@ class Graph_to_sequence_dfs(torch.utils.data.Dataset):
         G = nx.from_numpy_matrix(adj_copy_matrix)
         # then do bfs in the permuted G
         start_idx = np.random.randint(adj_copy.shape[0])
-        x_idx = np.array(order_seq(G, start_idx, "dfs"))
+        x_idx = np.array(order_seq(G, start_idx, self.order))
         adj_copy = adj_copy[np.ix_(x_idx, x_idx)]
-        adj_encoded = encode_adj(adj_copy.copy(), max_prev_node=self.n-1)
+        adj_encoded = encode_adj(adj_copy.copy(), max_prev_node=self.n - 1)
         # get x and y and adj
         # for small graph the rest are zero padded
         y_batch[0:adj_encoded.shape[0], :] = adj_encoded
         x_batch[1:adj_encoded.shape[0] + 1, :] = adj_encoded
-        return {'x':x_batch,'y':y_batch, 'len':len_batch}
+        return {'x': x_batch, 'y': y_batch, 'len': len_batch}
+
 
 class Graph_to_sequence_nobfs(torch.utils.data.Dataset):
     def __init__(self, G_list, max_num_node=None):
@@ -131,23 +137,26 @@ class Graph_to_sequence_nobfs(torch.utils.data.Dataset):
             self.n = max(self.len_all)
         else:
             self.n = max_num_node
+
     def __len__(self):
         return len(self.adj_all)
+
     def __getitem__(self, idx):
         adj_copy = self.adj_all[idx].copy()
-        x_batch = np.zeros((self.n, self.n-1))  # here zeros are padded for small graph
-        x_batch[0,:] = 1 # the first input token is all ones
-        y_batch = np.zeros((self.n, self.n-1))  # here zeros are padded for small graph
+        x_batch = np.zeros((self.n, self.n - 1))  # here zeros are padded for small graph
+        x_batch[0, :] = 1  # the first input token is all ones
+        y_batch = np.zeros((self.n, self.n - 1))  # here zeros are padded for small graph
         # generate input x, y pairs
         len_batch = adj_copy.shape[0]
         x_idx = np.random.permutation(adj_copy.shape[0])
         adj_copy = adj_copy[np.ix_(x_idx, x_idx)]
-        adj_encoded = encode_adj(adj_copy.copy(), max_prev_node=self.n-1)
+        adj_encoded = encode_adj(adj_copy.copy(), max_prev_node=self.n - 1)
         # get x and y and adj
         # for small graph the rest are zero padded
         y_batch[0:adj_encoded.shape[0], :] = adj_encoded
         x_batch[1:adj_encoded.shape[0] + 1, :] = adj_encoded
-        return {'x':x_batch,'y':y_batch, 'len':len_batch}
+        return {'x': x_batch, 'y': y_batch, 'len': len_batch}
+
 
 def order_seq(G, start_id, ordering="bfs"):
     '''
@@ -157,10 +166,15 @@ def order_seq(G, start_id, ordering="bfs"):
     :param start_id:
     :return:
     '''
-    if ordering=="bfs":
+    if ordering == "bfs":
         dictionary = dict(nx.bfs_successors(G, start_id))
-    elif ordering=="dfs":
-        return list(nx.dfs_tree(G,start_id).nodes())
+    elif ordering == "dfs":
+        return list(nx.dfs_tree(G, start_id).nodes())
+    elif ordering == "degree_descent":
+        node_degree_list = [(n, d) for n, d in G.degree()]
+        degree_sequence = sorted(
+            node_degree_list, key=lambda tt: tt[1], reverse=True)
+        return [dd[0] for dd in degree_sequence]
     start = [start_id]
     output = [start_id]
     while len(start) > 0:
