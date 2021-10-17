@@ -187,13 +187,17 @@ class GraphRnnRunner(object):
             dataset = Graph_to_sequence(self.graphs_train, max_prev_node=self.model_conf.max_prev_node,
                                         max_num_node=self.max_num_nodes)
             max_prev_node = dataset.max_prev_node
+        elif self.dataset_conf.node_order == "BFSMAX":
+            max_prev_node = self.max_num_nodes - 1
+            dataset = Graph_to_sequence(self.graphs_train, max_prev_node=self.model_conf.max_prev_node,
+                                        max_num_node=self.max_num_nodes)
         elif self.dataset_conf.node_order == "DFS":
             max_prev_node = self.max_num_nodes - 1
             dataset = Graph_to_sequence_dfs(self.graphs_train, max_prev_node,
                                             max_num_node=self.max_num_nodes)
         elif self.dataset_conf.node_order == "nobfs":
-            dataset = Graph_to_sequence_nobfs(self.graphs_train, max_num_node=self.max_num_nodes)
             max_prev_node = self.max_num_nodes - 1
+            dataset = Graph_to_sequence_nobfs(self.graphs_train, max_num_node=self.max_num_nodes)
         elif self.dataset_conf.node_order == "degree_descent":
             max_prev_node = self.max_num_nodes - 1
             dataset = Graph_to_sequence_dfs(self.graphs_train, max_prev_node,order=self.dataset_conf.node_order,

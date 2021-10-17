@@ -11,7 +11,7 @@ dataset:
   loader_name: GRANData
   name: community4small
   data_path: data
-  node_order: BFS # k_core/BFS/degree_decent
+  node_order: BFSMAX # k_core/BFS/degree_decent
   train_ratio: 0.8
   dev_ratio: 0.2
   num_subgraph_batch: 50 # number of subgraphs per mini-batch
