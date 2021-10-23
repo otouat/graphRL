@@ -33,7 +33,7 @@ model:
   batch_size : 32  # normal: 32, and the rest should be changed accordingly
   test_batch_size : 32
   test_total_size : 1000
-  num_layers : 5
+  num_layers : 4
   batch_ratio : 32
 train:
   optimizer: Adam
