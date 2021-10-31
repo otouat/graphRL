@@ -11,7 +11,7 @@ from scipy import sparse as sp
 import networkx as nx
 import torch.nn.functional as F
 import random
-
+from random import shuffle
 __all__ = [
     'save_graph_list', 'load_graph_list', 'graph_load_batch',
     'preprocess_graph_list', 'create_graphs'
@@ -156,6 +156,42 @@ def graph_load_batch(data_dir,
     print('Loaded')
     return graphs
 
+def parse_index_file(filename):
+    index = []
+    for line in open(filename):
+        index.append(int(line.strip()))
+    return index
+
+def Graph_load(dataset = 'cora'):
+    '''
+    Load a single graph dataset
+    :param dataset: dataset name
+    :return:
+    '''
+    names = ['x', 'tx', 'allx', 'graph']
+    objects = []
+    for i in range(len(names)):
+        load = pickle.load(open("dataset/ind.{}.{}".format(dataset, names[i]), 'rb'), encoding='latin1')
+        # print('loaded')
+        objects.append(load)
+        # print(load)
+    x, tx, allx, graph = tuple(objects)
+    test_idx_reorder = parse_index_file("dataset/ind.{}.test.index".format(dataset))
+    test_idx_range = np.sort(test_idx_reorder)
+
+    if dataset == 'citeseer':
+        # Fix citeseer dataset (there are some isolated nodes in the graph)
+        # Find isolated nodes, add them as zero-vecs into the right position
+        test_idx_range_full = range(min(test_idx_reorder), max(test_idx_reorder) + 1)
+        tx_extended = sp.lil_matrix((len(test_idx_range_full), x.shape[1]))
+        tx_extended[test_idx_range - min(test_idx_range), :] = tx
+        tx = tx_extended
+
+    features = sp.vstack((allx, tx)).tolil()
+    features[test_idx_reorder, :] = features[test_idx_range, :]
+    G = nx.from_dict_of_lists(graph)
+    adj = nx.adjacency_matrix(G)
+    return adj, features, G
 
 def n_community(c_sizes, p_inter=0.01, p_in = 0.7):
     graphs = [nx.gnp_random_graph(c_sizes[i], p_in, seed=i) for i in range(len(c_sizes))]
@@ -188,6 +224,11 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
         graphs = []
         for i in range(10, 20):
             for j in range(10, 20):
+                graphs.append(nx.grid_2d_graph(i, j))
+    if graph_type == 'grid_small':
+        graphs = []
+        for i in range(2, 5):
+            for j in range(2, 6):
                 graphs.append(nx.grid_2d_graph(i, j))
     elif graph_type == 'lobster':
         graphs = []
@@ -242,16 +283,16 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
                     graphs.append(nx.barabasi_albert_graph(i, j))
     elif graph_type == 'community2small':
         for k in range(500):
-            c_sizes = np.random.choice([12,13,14,15,16,17], 2)
-            graphs.append(n_community(c_sizes, p_inter=0.05,p_in=0.7))
+            c_sizes = np.random.choice(np.arange(start=6,stop=10), 2)
+            graphs.append(n_community(c_sizes, p_inter=0.01))
     elif graph_type == 'community4small':
         for k in range(500):
             c_sizes = np.random.choice([12, 13, 14, 15, 16, 17], 4)
-            graphs.append(n_community(c_sizes, p_inter=0.05))
+            graphs.append(n_community(c_sizes, p_inter=0.01))
     elif graph_type == 'community2':
         for k in range(500):
-            c_sizes = np.random.choice(list(range(30, 80)), 2)
-            graphs.append(n_community(c_sizes, p_inter=0.05, p_in=0.3))
+            c_sizes = np.random.choice(list(range(30, 81)), 2)
+            graphs.append(n_community(c_sizes, p_inter=0.005, p_in=0.3))
     elif graph_type == 'community4':
         for k in range(500):
             c_sizes = np.random.choice(list(range(30, 80)), 4)
@@ -276,6 +317,17 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
         for i in range(2000, 2010):
             for j in range(5):
                 graphs.append(nx.watts_strogatz_graph(i, 2, 0.0))
+    elif graph_type == 'citeseer_small':
+        _, _, G = Graph_load(dataset='citeseer')
+        G = max(nx.connected_component_subgraphs(G), key=len)
+        G = nx.convert_node_labels_to_integers(G)
+        graphs = []
+        for i in range(G.number_of_nodes()):
+            G_ego = nx.ego_graph(G, i, radius=1)
+            if (G_ego.number_of_nodes() >= 4) and (G_ego.number_of_nodes() <= 20):
+                graphs.append(G_ego)
+        shuffle(graphs)
+        graphs = graphs[0:200]
 
     num_nodes = [gg.number_of_nodes() for gg in graphs]
     num_edges = [gg.number_of_edges() for gg in graphs]
