@@ -1,6 +1,6 @@
 ---
 exp_name: GraphRNN
-exp_dir: exp/GraphRNN/rnn/watts
+exp_dir: exp/GraphRNN/rnn/gridsmall
 runner: GraphRnnRunner
 use_horovod: false
 use_gpu: true
@@ -9,9 +9,9 @@ gpus: [0]
 seed: 1234
 dataset:
   loader_name: GRANData
-  name: watts_ring
+  name: grid_small
   data_path: data
-  node_order: BFS # k_core/BFS/degree_decent
+  node_order: BFSMAX # k_core/BFS/degree_decent
   train_ratio: 0.8
   dev_ratio: 0.2
   num_subgraph_batch: 50 # number of subgraphs per mini-batch
@@ -28,8 +28,8 @@ model:
   embedding_size_rnn : 64  # the size for LSTM input
   embedding_size_rnn_output : 8  # the embedding size for output rnn
   embedding_size_output : 64  # the embedding size for output (VAE/MLP)
-  max_num_node : 200  # max number of nodes in a graph
-  max_prev_node : 3 # max previous node that looks back
+  max_num_node : 20  # max number of nodes in a graph
+  max_prev_node : 15  # max previous node that looks back
   batch_size : 32  # normal: 32, and the rest should be changed accordingly
   test_batch_size : 32
   test_total_size : 1000
@@ -45,7 +45,7 @@ train:
   display_iter: 10
   snapshot_epoch: 100
   valid_epoch: 50
-  lr: 0.001
+  lr: 0.003
   wd: 0.0e-4
   momentum: 0.9
   shuffle: true
@@ -63,6 +63,6 @@ test:
   num_vis: 20
   vis_num_row: 5 # visualize `num_vis` samples in `vis_num_row` rows
   better_vis: true
-  test_model_dir: exp/GraphRNN/RNN_erdos_2021-Jun-19-15-49-41_8428/
+  test_model_dir: exp/GraphRNN/RNN_grid_2021-Jun-19-16-29-29_15200
   test_rnn_name: rnn_snapshot_0000100.pth
   test_output_name : output_snapshot_0000100.pth

@@ -1,6 +1,6 @@
 ---
 exp_name: GRAN
-exp_dir: exp/GRAN/community2small
+exp_dir: exp/GRAN/gridsmall
 runner: GranRunner
 use_horovod: false
 use_gpu: true
@@ -9,9 +9,9 @@ gpus: [0]
 seed: 1234
 dataset:
   loader_name: GRANData
-  name: community2small
-  data_path: data
-  node_order: k_core # k_core/BFS/degree_decent
+  name: grid_small
+  data_path: data/
+  node_order: DFS # k_core/BFS/degree_decent
   train_ratio: 0.8
   dev_ratio: 0.2
   num_subgraph_batch: 50 # number of subgraphs per mini-batch
@@ -26,7 +26,7 @@ model:
   is_sym: true
   block_size: 1
   sample_stride: 1
-  max_num_nodes: 18
+  max_num_nodes: 20
   hidden_dim: 128
   embedding_dim: 128
   num_GNN_layers: 7
@@ -40,11 +40,11 @@ train:
   lr_decay: 0.3
   lr_decay_epoch: [100000000] # no decay
   num_workers: 0
-  max_epoch: 100
+  max_epoch: 3000
   batch_size: 1
-  display_iter: 400
-  snapshot_epoch: 1
-  valid_epoch: 1
+  display_iter: 10
+  snapshot_epoch: 100
+  valid_epoch: 50
   lr: 1.0e-4
   wd: 0.0e-4
   momentum: 0.9
@@ -55,13 +55,13 @@ train:
   resume_model: model_snapshot_0005000.pth
 test:
   batch_size: 20
-  num_workers: 4
-  num_test_gen: 100 # number of generated samples
-  is_vis: true
-  is_single_plot: true # visualize `num_vis` samples in a single image
+  num_workers: 0
+  num_test_gen: 20 # number of generated samples
+  is_vis: false
+  is_single_plot: false # visualize `num_vis` samples in a single image
   is_test_ER: false # test Erdos-Renyi baseline
   num_vis: 20
   vis_num_row: 5 # visualize `num_vis` samples in `vis_num_row` rows
   better_vis: true
-  test_model_dir: baselineModels/GRAN/exp/GRAN/GRANMixtureBernoulli_erdos_2021-May-26-11-45-19_11008/
-  test_model_name: model_snapshot_0000100.pth
+  test_model_dir: snapshot_model
+  test_model_name: gran_grid.pth

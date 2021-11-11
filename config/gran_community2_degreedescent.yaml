@@ -11,7 +11,7 @@ dataset:
   loader_name: GRANData
   name: community2
   data_path: data
-  node_order: degree_descent # k_core/BFS/degree_decent
+  node_order: degree_decent # k_core/BFS/degree_decent
   train_ratio: 0.8
   dev_ratio: 0.2
   num_subgraph_batch: 50 # number of subgraphs per mini-batch
@@ -40,11 +40,11 @@ train:
   lr_decay: 0.3
   lr_decay_epoch: [100000000] # no decay
   num_workers: 0
-  max_epoch: 15
+  max_epoch: 600
   batch_size: 1
-  display_iter: 10
-  snapshot_epoch: 5
-  valid_epoch: 5
+  display_iter: 400
+  snapshot_epoch: 20
+  valid_epoch: 20
   lr: 1.0e-4
   wd: 0.0e-4
   momentum: 0.9

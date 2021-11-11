@@ -27,8 +27,8 @@ model:
   block_size: 1
   sample_stride: 1
   max_num_nodes: 200
-  hidden_dim: 128
-  embedding_dim: 128
+  hidden_dim: 256
+  embedding_dim: 256
   num_GNN_layers: 7
   num_GNN_prop: 1
   num_canonical_order: 1
@@ -36,7 +36,7 @@ model:
   has_attention: true
   edge_weight: 1.0e+0
 train:
-  optimizer: Adam
+  optimizer: SGD
   lr_decay: 0.3
   lr_decay_epoch: [100000000] # no decay
   num_workers: 0
@@ -57,9 +57,10 @@ test:
   batch_size: 20
   num_workers: 4
   num_test_gen: 100 # number of generated samples
-  is_vis: true
+  is_vis: false
   is_single_plot: true # visualize `num_vis` samples in a single image
   is_test_ER: false # test Erdos-Renyi baseline
+  is_test_resampled: true
   num_vis: 20
   vis_num_row: 5 # visualize `num_vis` samples in `vis_num_row` rows
   better_vis: true

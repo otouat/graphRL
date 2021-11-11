@@ -7,8 +7,8 @@ import numpy as np
 
 from tqdm import tqdm
 
-from util import load_data, load_synth_data, separate_data
-from models.graphcnn import GraphCNN
+from gin_based_fid.util import load_data, load_synth_data, separate_data
+from gin_based_fid.models.graphcnn import GraphCNN
 
 criterion = nn.CrossEntropyLoss()
 
@@ -91,7 +91,7 @@ def main():
                         help='input batch size for training (default: 32)')
     parser.add_argument('--iters_per_epoch', type=int, default=50,
                         help='number of iterations per each epoch (default: 50)')
-    parser.add_argument('--epochs', type=int, default=60,
+    parser.add_argument('--epochs', type=int, default=1,
                         help='number of epochs to train (default: 350)')
     parser.add_argument('--lr', type=float, default=0.01,
                         help='learning rate (default: 0.01)')
@@ -141,6 +141,7 @@ def main():
 
 
     for epoch in range(1, args.epochs + 1):
+        optimizer.step()
         scheduler.step()
 
         avg_loss = train(args, model, device, train_graphs, optimizer, epoch)

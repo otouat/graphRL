@@ -1,6 +1,6 @@
 ---
 exp_name: GRAN
-exp_dir: exp/GRAN/community2small
+exp_dir: exp/GRAN/community4small
 runner: GranRunner
 use_horovod: false
 use_gpu: true
@@ -9,9 +9,9 @@ gpus: [0]
 seed: 1234
 dataset:
   loader_name: GRANData
-  name: community2small
+  name: community4small
   data_path: data
-  node_order: k_core # k_core/BFS/degree_decent
+  node_order: None # k_core/BFS/degree_decent
   train_ratio: 0.8
   dev_ratio: 0.2
   num_subgraph_batch: 50 # number of subgraphs per mini-batch
@@ -26,7 +26,7 @@ model:
   is_sym: true
   block_size: 1
   sample_stride: 1
-  max_num_nodes: 18
+  max_num_nodes: 68
   hidden_dim: 128
   embedding_dim: 128
   num_GNN_layers: 7
@@ -40,11 +40,11 @@ train:
   lr_decay: 0.3
   lr_decay_epoch: [100000000] # no decay
   num_workers: 0
-  max_epoch: 100
+  max_epoch: 600
   batch_size: 1
   display_iter: 400
-  snapshot_epoch: 1
-  valid_epoch: 1
+  snapshot_epoch: 20
+  valid_epoch: 20
   lr: 1.0e-4
   wd: 0.0e-4
   momentum: 0.9
@@ -56,7 +56,7 @@ train:
 test:
   batch_size: 20
   num_workers: 4
-  num_test_gen: 100 # number of generated samples
+  num_test_gen: 20 # number of generated samples
   is_vis: true
   is_single_plot: true # visualize `num_vis` samples in a single image
   is_test_ER: false # test Erdos-Renyi baseline
