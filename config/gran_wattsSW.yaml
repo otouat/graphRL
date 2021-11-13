@@ -36,7 +36,7 @@ model:
   has_attention: true
   edge_weight: 1.0e+0
 train:
-  optimizer: SGD
+  optimizer: Adam
   lr_decay: 0.3
   lr_decay_epoch: [100000000] # no decay
   num_workers: 0

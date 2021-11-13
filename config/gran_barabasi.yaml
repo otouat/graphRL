@@ -45,7 +45,7 @@ train:
   display_iter: 400
   snapshot_epoch: 20
   valid_epoch: 20
-  lr: 1.0e-3
+  lr: 1.0e-4
   wd: 0.0e-4
   momentum: 0.9
   shuffle: true

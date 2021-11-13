@@ -280,7 +280,7 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
         for i in range(100, 200):
             for j in range(4, 5):
                 for k in range(5):
-                    graphs.append(nx.barabasi_albert_graph(i, j))
+                    graphs.append(nx.barabasi_albert_graph(200, j))
     elif graph_type == 'community2small':
         for k in range(500):
             c_sizes = np.random.choice(np.arange(start=6,stop=10), 2)
@@ -308,7 +308,7 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
     elif graph_type == 'wattsSW':
         for i in range(100, 200):
             for j in range(5):
-                graphs.append(nx.watts_strogatz_graph(i, 4, 0.1))
+                graphs.append(nx.watts_strogatz_graph(200, 4, 0.1))
     elif graph_type == 'watts_ring':
         for i in range(100, 200):
             for j in range(5):
