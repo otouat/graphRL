@@ -202,6 +202,10 @@ class GraphRnnRunner(object):
             max_prev_node = self.max_num_nodes - 1
             dataset = Graph_to_sequence_dfs(self.graphs_train, max_prev_node,order=self.dataset_conf.node_order,
                                             max_num_node=self.max_num_nodes)
+        elif self.dataset_conf.node_order == "RCM":
+            dataset = Graph_to_sequence_rcm(self.graphs_train, max_prev_node=self.model_conf.max_prev_node,
+                                        max_num_node=self.max_num_nodes)
+            max_prev_node = dataset.max_prev_node
         sample_strategy = torch.utils.data.sampler.WeightedRandomSampler(
             [1.0 / len(dataset) for i in range(len(dataset))],
             num_samples=self.model_conf.batch_size * self.model_conf.batch_ratio,

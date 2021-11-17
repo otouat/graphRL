@@ -308,7 +308,7 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
     elif graph_type == 'wattsSW':
         for i in range(100, 200):
             for j in range(5):
-                graphs.append(nx.watts_strogatz_graph(200, 4, 0.1))
+                graphs.append(nx.watts_strogatz_graph(i, 4, 0.1))
     elif graph_type == 'watts_ring':
         for i in range(100, 200):
             for j in range(5):
@@ -328,6 +328,12 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
                 graphs.append(G_ego)
         shuffle(graphs)
         graphs = graphs[0:200]
+    elif graph_type == 'enzymes':
+        graphs_raw= graph_load_batch(data_dir,min_num_nodes=10)
+        graphs=[]
+        for g in graphs_raw:
+            if g.number_of_nodes()<=20:
+                graphs.append(g)
 
     num_nodes = [gg.number_of_nodes() for gg in graphs]
     num_edges = [gg.number_of_edges() for gg in graphs]

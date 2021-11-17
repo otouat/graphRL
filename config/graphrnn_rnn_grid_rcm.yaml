@@ -11,7 +11,7 @@ dataset:
   loader_name: GRANData
   name: grid
   data_path: data
-  node_order: BFS # k_core/BFS/degree_decent
+  node_order: RCM # k_core/BFS/degree_decent
   train_ratio: 0.8
   dev_ratio: 0.2
   num_subgraph_batch: 50 # number of subgraphs per mini-batch
@@ -40,12 +40,12 @@ train:
   lr_decay: 0.3
   lr_decay_epoch: [400, 1000] # no decay
   num_workers: 0
-  max_epoch: 3000
+  max_epoch: 10000
   batch_size: 1
   display_iter: 10
   snapshot_epoch: 100
   valid_epoch: 50
-  lr: 0.005
+  lr: 0.003
   wd: 0.0e-4
   momentum: 0.9
   shuffle: true
