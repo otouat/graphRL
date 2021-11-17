@@ -85,6 +85,8 @@ class Graph_to_sequence(Dataset):
         max_prev_node = sorted(max_prev_node)[-1 * topk:]
         return max_prev_node
 
+
+
 class Graph_to_sequence_rcm(Dataset):
     """Graph Dataset"""
 
@@ -127,8 +129,8 @@ class Graph_to_sequence_rcm(Dataset):
         adj_copy_matrix = np.asmatrix(adj_copy)
         G = nx.from_numpy_matrix(adj_copy_matrix)
         # then do rcm in the permuted G
-        rcm = np.array(list(reverse_cuthill_mckee_ordering(G)))
-        adj_copy = adj_copy[np.ix_(rcm, rcm)]
+        x_idx = np.array(list(reverse_cuthill_mckee_ordering(G)))
+        adj_copy = adj_copy[np.ix_(x_idx, x_idx)]
         adj_encoded = encode_adj(adj_copy.copy(), max_prev_node=self.max_prev_node)
         # get x and y and adj
         # for small graph the rest are zero padded
@@ -149,8 +151,8 @@ class Graph_to_sequence_rcm(Dataset):
             adj_copy_matrix = np.asmatrix(adj_copy)
             G = nx.from_numpy_matrix(adj_copy_matrix)
             # then do bfs in the permuted G
-            rcm = np.array(list(cuthill_mckee_ordering(G)))
-            adj_copy = adj_copy[np.ix_(rcm, rcm)]
+            x_idx = np.array(list(reverse_cuthill_mckee_ordering(G)))
+            adj_copy = adj_copy[np.ix_(x_idx, x_idx)]
             # encode adj
             adj_encoded = encode_adj_flexible(adj_copy.copy())
             if adj_encoded == []:
