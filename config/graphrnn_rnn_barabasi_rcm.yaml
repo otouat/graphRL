@@ -1,0 +1,68 @@
+---
+exp_name: GraphRNN
+exp_dir: exp/GraphRNN/rnn/barabasi
+runner: GraphRnnRunner
+use_horovod: false
+use_gpu: true
+device: cuda:0
+gpus: [0]
+seed: 1234
+dataset:
+  loader_name: GRANData
+  name: barabasi
+  data_path: data
+  node_order: RCM # k_core/BFS/degree_decent
+  train_ratio: 0.8
+  dev_ratio: 0.2
+  num_subgraph_batch: 50 # number of subgraphs per mini-batch
+  num_fwd_pass: 1
+  has_node_feat: false
+  is_save_split: false
+  is_sample_subgraph: true # set to true if you want to sample subgraphs
+  is_overwrite_precompute: false
+model:
+  name: RNN
+  is_mlp : false
+  hidden_size_rnn : 128  # hidden size for main RNN
+  hidden_size_rnn_output: 16  # hidden size for output RNN
+  embedding_size_rnn : 64  # the size for LSTM input
+  embedding_size_rnn_output : 8  # the embedding size for output rnn
+  embedding_size_output : 64  # the embedding size for output (VAE/MLP)
+  max_num_node : 200  # max number of nodes in a graph
+  max_prev_node : null  # max previous node that looks back
+  batch_size : 32  # normal: 32, and the rest should be changed accordingly
+  test_batch_size : 32
+  test_total_size : 1000
+  num_layers : 4
+  batch_ratio : 32
+train:
+  optimizer: Adam
+  lr_decay: 0.3
+  lr_decay_epoch: [400, 1000] # no decay
+  num_workers: 0
+  max_epoch: 3000
+  batch_size: 1
+  display_iter: 10
+  snapshot_epoch: 100
+  valid_epoch: 50
+  lr: 0.001
+  wd: 0.0e-4
+  momentum: 0.9
+  shuffle: true
+  is_resume: false
+  resume_epoch: 5000
+  resume_dir: # exp/GRAN/your_exp_folder
+  resume_model: model_snapshot_0005000.pth
+test:
+  batch_size: 20
+  num_workers: 4
+  num_test_gen: 100 # number of generated samples
+  is_vis: true
+  is_single_plot: true # visualize `num_vis` samples in a single image
+  is_test_ER: false # test Erdos-Renyi baseline
+  num_vis: 20
+  vis_num_row: 5 # visualize `num_vis` samples in `vis_num_row` rows
+  better_vis: true
+  test_model_dir: exp/GraphRNN/RNN_erdos_2021-Jun-19-15-49-41_8428/
+  test_rnn_name: rnn_snapshot_0000100.pth
+  test_output_name : output_snapshot_0000100.pth
